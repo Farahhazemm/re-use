@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+
 using Microsoft.OpenApi.Models;
 
 namespace ReUse.API;
@@ -16,7 +17,7 @@ public class Program
         });
         builder.Services.AddOpenApi();
 
-        builder.Services.AddEndpointsApiExplorer(); 
+        builder.Services.AddEndpointsApiExplorer();
 
         // add swagger
         builder.Services.AddSwaggerGen(options =>
@@ -41,7 +42,7 @@ public class Program
                 In = ParameterLocation.Header,
                 Description = "Enter JWT token like: Bearer {your_token}"
             });
-            
+
             options.AddSecurityRequirement(new OpenApiSecurityRequirement
             {
                 {
@@ -56,14 +57,14 @@ public class Program
                     Array.Empty<string>()
                 }
             });
-            
+
             // options.IncludeXmlComments(
             //     Path.Combine(AppContext.BaseDirectory, "ReUse.API.xml"));
             //
             // options.IncludeXmlComments(
             //     Path.Combine(AppContext.BaseDirectory, "ReUse.ApplicationCore.xml"));
         });
-        
+
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
