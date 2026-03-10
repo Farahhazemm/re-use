@@ -7,9 +7,17 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Persistence\Configurations\" />
       <Folder Include="Persistence\Migrations\" />
       <Folder Include="Persistence\Repositories\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\ReUse.Application\ReUse.Application.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.*" />
+      <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.*" />
     </ItemGroup>
 
 </Project>
