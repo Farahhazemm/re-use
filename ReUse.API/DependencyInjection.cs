@@ -1,5 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 
+using FluentValidation;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
@@ -91,4 +93,22 @@ public static class DependencyInjection
 
         return services;
     }
+
+    #region Register FluentValidation validators
+    public static IServiceCollection AddValidation(this IServiceCollection services)
+    {
+        services.AddValidatorsFromAssemblyContaining<Program>();
+
+        return services;
+    }
+    #endregion
+
+    #region Register AutoMapper profiles
+    public static IServiceCollection AddAutoMapperProfiles(this IServiceCollection services)
+    {
+        services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+        return services;
+    }
+    #endregion
 }

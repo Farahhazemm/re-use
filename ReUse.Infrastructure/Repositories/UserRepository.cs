@@ -5,10 +5,10 @@ using ReUse.Infrastructure.Persistence;
 
 namespace ReUse.Infrastructure.Repositories;
 
-public class UserRepository : IUserRepository
+public class UserRepository : BaseRepository<User>, IUserRepository
 {
     private readonly ApplicationDbContext _context;
-    public UserRepository(ApplicationDbContext context)
+    public UserRepository(ApplicationDbContext context) : base(context)
     {
         _context = context;
     }

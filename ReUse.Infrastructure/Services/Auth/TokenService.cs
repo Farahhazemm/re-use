@@ -15,7 +15,7 @@ using ReUse.Application.Options;
 using ReUse.Infrastructure.Interfaces.Services;
 using ReUse.Infrastructure.Models;
 
-namespace ReUse.Infrastructure.Services;
+namespace ReUse.Infrastructure.Services.Auth;
 
 public class TokenService : ITokenService
 {
