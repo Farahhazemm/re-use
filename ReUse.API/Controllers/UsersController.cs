@@ -8,6 +8,8 @@ using ReUse.Application.DTOs.Users.UserProfile.Commands;
 using ReUse.Application.DTOs.Users.UserProfile.Contracts;
 using ReUse.Application.Interfaces.Services.Auth;
 using ReUse.Application.Interfaces.Services.UserProfile;
+using ReUse.Application.Options.Enums;
+
 namespace ReUse.API.Controllers;
 
 /// <summary>
@@ -82,6 +84,74 @@ public class UsersController : ControllerBase
     {
         var userId = User.GetBusinessId();
         await _userService.UpdateUserProfileAsync(userId, dto);
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Update the authenticated user's profile image
+    /// </summary>
+    /// <param name="command">Profile image file</param>
+    /// <returns>No content if updated successfully</returns>
+    /// <response code="204">Profile image updated successfully</response>
+    /// <response code="400">Invalid request (missing image or invalid data)</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User is not authorized</response>
+    [HttpPut("images/profile")]
+    public Task<IActionResult> UpdateProfileImage([FromForm] UpdateProfileImageCommand command)
+      => UpdateImage(command.Image, ProfileImageOptions.Profile);
+
+    /// <summary>
+    /// Update the authenticated user's cover image
+    /// </summary>
+    /// <param name="command">Cover image file</param>
+    /// <returns>No content if updated successfully</returns>
+    /// <response code="204">Cover image updated successfully</response>
+    /// <response code="400">Invalid request (missing image or invalid data)</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User is not authorized</response>
+    [HttpPut("images/cover")]
+    public Task<IActionResult> UpdateCoverImage([FromForm] UpdateProfileImageCommand command)
+        => UpdateImage(command.Image, ProfileImageOptions.Cover);
+
+    /// <summary>
+    /// Delete the authenticated user's profile image
+    /// </summary>
+    /// <returns>No content if deleted successfully</returns>
+    /// <response code="204">Profile image deleted successfully</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User is not authorized</response>
+    [HttpDelete("images/profile")]
+    public Task<IActionResult> DeleteProfileImage()
+        => DeleteImage(ProfileImageOptions.Profile);
+
+    /// <summary>
+    /// Delete the authenticated user's cover image
+    /// </summary>
+    /// <returns>No content if deleted successfully</returns>
+    /// <response code="204">Cover image deleted successfully</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User is not authorized</response>
+    [HttpDelete("images/cover")]
+    public Task<IActionResult> DeleteCoverImage()
+        => DeleteImage(ProfileImageOptions.Cover);
+
+    private async Task<IActionResult> UpdateImage(IFormFile image, ProfileImageOptions type)
+    {
+        var userId = User.GetBusinessId();
+        if (image == null)
+            return BadRequest("Image is required");
+
+        await _userService.UpdateImageProfileAsync(
+            userId!, new UpdateProfileImageCommand(image, type));
+
+        return NoContent();
+    }
+
+    private async Task<IActionResult> DeleteImage(ProfileImageOptions type)
+    {
+        var userId = User.GetBusinessId();
+
+        await _userService.DeleteProfileImageAsync(userId!, type);
         return NoContent();
     }
 

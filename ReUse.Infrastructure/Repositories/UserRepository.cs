@@ -13,18 +13,5 @@ public class UserRepository : BaseRepository<User>, IUserRepository
         _context = context;
     }
 
-    public void Add(User entity)
-    {
-        _context.Set<User>().Add(entity);
-    }
 
-    public void Update(User entity)
-    {
-        _context.Set<User>().Update(entity);
-    }
-
-    public void Remove(User entity)
-    {
-        _context.Set<User>().Remove(entity);
-    }
 }

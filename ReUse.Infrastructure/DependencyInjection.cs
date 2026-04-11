@@ -9,16 +9,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 using ReUse.Application.Interfaces;
 using ReUse.Application.Interfaces.Services.Auth;
+using ReUse.Application.Interfaces.Services.Images;
 using ReUse.Application.Interfaces.Services.UserProfile;
+using ReUse.Application.Options.Cloudniary;
 using ReUse.Infrastructure.Services.Auth;
+using ReUse.Infrastructure.Services.Images;
 using ReUse.Infrastructure.Services.UserProfile;
-//using ReUse.Application.Interfaces.IRepositories;
-//using ReUse.Application.Interfaces.Services.UserProfile;
-//using ReUse.Application.Interfaces.UnitOfWork;
-//using ReUse.Infrastructure.Persistence.Repositories;
-//using ReUse.Infrastructure.Persistence.UnitOfWork;
-//using ReUse.Infrastructure.Services.UserProfile;
-
 namespace ReUse.Infrastructure;
 
 public static class DependencyInjection
@@ -27,18 +23,22 @@ public static class DependencyInjection
            IConfiguration configuration)
     {
 
-        // #region Repositories
-        //services.AddScoped<IUserProfileRepository, UserProfileRepository>();
-        // #endregion
+
 
         #region UnitOfWork
-        services.AddScoped<IUnitOfWork, ReUse.Infrastructure.UnitOfWork.UnitOfWork>();
+        services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
         #endregion
 
         #region Services
-        //services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<IAuthService, JwtAuthService>();
         services.AddScoped<IUserService, UserService>();
+        #endregion
+
+        #region ImageServic
+        services.AddScoped<IImageValidator, ImageValidator>();
+        services.AddScoped<ICloudinaryService, CloudinaryService>();
+        services.Configure<CloudinaryOptions>(
+        configuration.GetSection("CloudinarySettings"));
         #endregion
 
 

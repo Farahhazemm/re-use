@@ -11,10 +11,6 @@ namespace ReUse.Application.Interfaces.Repository
 
     public interface IUserRepository : IBaseRepository<User>
     {
-        void Add(User entity);
 
-        void Update(User entity);
-
-        void Remove(User entity);
     }
 }

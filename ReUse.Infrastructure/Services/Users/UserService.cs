@@ -9,7 +9,11 @@ using AutoMapper;
 using ReUse.Application.DTOs.Users.UserProfile.Commands;
 using ReUse.Application.DTOs.Users.UserProfile.Contracts;
 using ReUse.Application.Interfaces;
+using ReUse.Application.Interfaces.Services.Images;
 using ReUse.Application.Interfaces.Services.UserProfile;
+using ReUse.Application.Options.Enums;
+
+
 //using ReUse.Application.Utilities.Enums;
 using ReUse.Domain.Entities;
 
@@ -20,14 +24,14 @@ namespace ReUse.Infrastructure.Services.UserProfile;
 public class UserService : IUserService
 {
     private readonly IUnitOfWork _unitOfWork;
-    //private readonly IImageValidator _imageValidator;
-    //private readonly ICloudinaryService _cloudinaryService;
+    private readonly IImageValidator _imageValidator;
+    private readonly ICloudinaryService _cloudinaryService;
     private readonly IMapper _mapper;
-    public UserService(IUnitOfWork unitOfWork/*, IImageValidator imageValidator, ICloudinaryService cloudinaryService */, IMapper mapper)
+    public UserService(IUnitOfWork unitOfWork, IImageValidator imageValidator, ICloudinaryService cloudinaryService, IMapper mapper)
     {
         _unitOfWork = unitOfWork;
-        // _imageValidator = imageValidator;
-        //_cloudinaryService = cloudinaryService;
+        _imageValidator = imageValidator;
+        _cloudinaryService = cloudinaryService;
         _mapper = mapper;
     }
     public async Task<UserProfileDto> GetUserProfileAsync(Guid userId)
@@ -47,61 +51,61 @@ public class UserService : IUserService
         await _unitOfWork.SaveChangesAsync();
     }
 
-    //public async Task UpdateImageProfileAsync(Guid userId, UpdateProfileImageCommand command)
-    //{
-    //    _imageValidator.Validate(command.Image);
+    public async Task UpdateImageProfileAsync(Guid userId, UpdateProfileImageCommand command)
+    {
+        _imageValidator.Validate(command.Image);
 
-    //    var user = await _unitOfWork.UserProfile.GetByIdAsync(userId);
+        var user = await _unitOfWork.User.GetByIdAsync(userId);
 
-    //    var folder = $"userImages/{userId}/{command.ImageType.ToString().ToLower()}";
-    //    var newImage = await _cloudinaryService.UpdateAsync(command.Image, folder);
+        var folder = $"userImages/{userId}/{command.ImageType.ToString().ToLower()}";
+        var newImage = await _cloudinaryService.UpdateAsync(command.Image, folder);
 
-    //    string? oldPublicId;
+        string? oldPublicId;
 
-    //    if (command.ImageType == ProfileImageType.Profile)
-    //    {
-    //        oldPublicId = user!.ProfileImagePublicId;
-    //        user.ProfileImageUrl = newImage.Url;
-    //        user.ProfileImagePublicId = newImage.PublicId;
-    //    }
-    //    else
-    //    {
-    //        oldPublicId = user!.CoverImagePublicId;
-    //        user.CoverImageUrl = newImage.Url;
-    //        user.CoverImagePublicId = newImage.PublicId;
-    //    }
+        if (command.ImageType == ProfileImageOptions.Profile)
+        {
+            oldPublicId = user!.ProfileImagePublicId;
+            user.ProfileImageUrl = newImage.Url;
+            user.ProfileImagePublicId = newImage.PublicId;
+        }
+        else
+        {
+            oldPublicId = user!.CoverImagePublicId;
+            user.CoverImageUrl = newImage.Url;
+            user.CoverImagePublicId = newImage.PublicId;
+        }
 
-    //    _unitOfWork.UserProfile.Update(user);
-    //    await _unitOfWork.SaveChangesAsync();
+        _unitOfWork.User.Update(user);
+        await _unitOfWork.SaveChangesAsync();
 
-    //    if (!string.IsNullOrWhiteSpace(oldPublicId))
-    //        await _cloudinaryService.DeleteAsync(oldPublicId);
-    //}
+        if (!string.IsNullOrWhiteSpace(oldPublicId))
+            await _cloudinaryService.DeleteAsync(oldPublicId);
+    }
 
-    //public async Task DeleteProfileImageAsync(Guid userId, ProfileImageType imageType)
-    //{
-    //    var user = await _unitOfWork.UserProfile.GetByIdAsync(userId);
+    public async Task DeleteProfileImageAsync(Guid userId, ProfileImageOptions imageType)
+    {
+        var user = await _unitOfWork.User.GetByIdAsync(userId);
 
-    //    var publicId = imageType == ProfileImageType.Profile
-    //        ? user!.ProfileImagePublicId
-    //        : user!.CoverImagePublicId;
+        var publicId = imageType == ProfileImageOptions.Profile
+            ? user!.ProfileImagePublicId
+            : user!.CoverImagePublicId;
 
-    //    if (string.IsNullOrWhiteSpace(publicId)) 
-    //        return;
+        if (string.IsNullOrWhiteSpace(publicId))
+            return;
 
-    //    if (imageType == ProfileImageType.Profile)
-    //    {
-    //        user.ProfileImageUrl = null;
-    //        user.ProfileImagePublicId = null;
-    //    }
-    //    else
-    //    {
-    //        user.CoverImageUrl = null;
-    //        user.CoverImagePublicId = null;
-    //    }
+        if (imageType == ProfileImageOptions.Profile)
+        {
+            user.ProfileImageUrl = null;
+            user.ProfileImagePublicId = null;
+        }
+        else
+        {
+            user.CoverImageUrl = null;
+            user.CoverImagePublicId = null;
+        }
 
-    //    _unitOfWork.UserProfile.Update(user);
-    //    await _unitOfWork.SaveChangesAsync();
-    //    await _cloudinaryService.DeleteAsync(publicId);
-    //}
+        _unitOfWork.User.Update(user);
+        await _unitOfWork.SaveChangesAsync();
+        await _cloudinaryService.DeleteAsync(publicId);
+    }
 }

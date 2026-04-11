@@ -19,7 +19,7 @@ using ReUse.API.Responses;
 using ReUse.Application.Errors;
 using ReUse.Application.Interfaces;
 using ReUse.Application.Interfaces.Services.Auth;
-using ReUse.Application.Options;
+using ReUse.Application.Options.Auth;
 using ReUse.Infrastructure;
 using ReUse.Infrastructure.Identity;
 using ReUse.Infrastructure.Interfaces.Repositories;
