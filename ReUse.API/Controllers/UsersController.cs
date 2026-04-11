@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using ReUse.API.Extensions;
 using ReUse.API.Responses;
 using ReUse.Application.DTOs.Auth.Register;
+using ReUse.Application.DTOs.Users.UserProfile.Commands;
 using ReUse.Application.DTOs.Users.UserProfile.Contracts;
 using ReUse.Application.Interfaces.Services.Auth;
 using ReUse.Application.Interfaces.Services.UserProfile;
@@ -63,26 +64,25 @@ public class UsersController : ControllerBase
         return Ok(userProfile);
     }
 
-    //     /// <summary>
-    //     /// Update the authenticated user's profile
-    //     /// </summary>
-    //     /// <param name="dto">Updated user data</param>
-    //     /// <response code="204">Profile updated successfully</response>
-    //     /// <response code="400">Invalid request data</response>
-    //     /// <response code="401">User is not authenticated</response>
-    //     /// <response code="403">User is not authorized (User only)</response>
-    //     [Authorize(Roles = "User")]
-    //     [HttpPatch("me")]
-    //     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    //     [ProducesResponseType(typeof(ErrorResponse),StatusCodes.Status400BadRequest)]
-    //     [ProducesResponseType(typeof(ErrorResponse),StatusCodes.Status403Forbidden)]
-    //     [ProducesResponseType(typeof(ErrorResponse),StatusCodes.Status401Unauthorized)]
-    //     public async Task<IActionResult> UpdateAsync([FromBody] UpdateUserDto dto)
-    //     {
-    //         var userId = ClaimsPrincipalExtensions.GetUserId(User);
-    //         
-    //         await _userService.UpdateAsync(userId, dto);
-    //         return NoContent();
-    //     }
-    //     
+    /// <summary>
+    /// Update the authenticated user's profile
+    /// </summary>
+    /// <param name="dto">Updated user data</param>
+    /// <response code="204">Profile updated successfully</response>
+    /// <response code="400">Invalid request data</response>
+    /// <response code="401">User is not authenticated</response>
+    /// <response code="403">User is not authorized (User only)</response>
+    [Authorize(Roles = "User,Admin")]
+    [HttpPatch("/info")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> UpdateAsync([FromBody] UpdateUserProfileCommand dto)
+    {
+        var userId = User.GetBusinessId();
+        await _userService.UpdateUserProfileAsync(userId, dto);
+        return NoContent();
+    }
+
 }

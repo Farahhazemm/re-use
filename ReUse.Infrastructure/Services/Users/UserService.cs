@@ -38,14 +38,14 @@ public class UserService : IUserService
 
     }
 
-    //public async Task UpdateUserProfileAsync(Guid userId, UpdateUserProfileCommand command)
-    //{
-    //    var user = await _unitOfWork.UserProfile.GetByIdAsync(userId);
-    //    // I don't need Check if user is null as iam sure user already Authenticated
-    //    _mapper.Map(command, user);
-    //    _unitOfWork.UserProfile.Update(user!);
-    //    await _unitOfWork.SaveChangesAsync();
-    //}
+    public async Task UpdateUserProfileAsync(Guid userId, UpdateUserProfileCommand command)
+    {
+        var user = await _unitOfWork.User.GetByIdAsync(userId);
+        // I don't need Check if user is null as iam sure user already Authenticated
+        _mapper.Map(command, user);
+        _unitOfWork.User.Update(user!);
+        await _unitOfWork.SaveChangesAsync();
+    }
 
     //public async Task UpdateImageProfileAsync(Guid userId, UpdateProfileImageCommand command)
     //{

@@ -1,10 +1,12 @@
 ﻿using System.Text.Json.Serialization;
 
 using FluentValidation;
+using FluentValidation.AspNetCore;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
+using ReUse.Application.DTOs.Users.UserProfile.Commands;
 using ReUse.Infrastructure.Identity;
 using ReUse.Infrastructure.Persistence;
 
@@ -97,7 +99,9 @@ public static class DependencyInjection
     #region Register FluentValidation validators
     public static IServiceCollection AddValidation(this IServiceCollection services)
     {
-        services.AddValidatorsFromAssemblyContaining<Program>();
+        services.AddFluentValidationAutoValidation();
+
+        services.AddValidatorsFromAssembly(typeof(UpdateUserProfileValidator).Assembly);
 
         return services;
     }
