@@ -9,26 +9,26 @@ using ReUse.Domain.Enums;
 namespace ReUse.Application.DTOs.Products.Responses;
 
 public record ProductResponse
-    (
-      Guid Id,
-      ProductType Type,
-      string Title,
-      string Description,
-      Guid CategoryId,
-      ProductCondition? Condition,
-      string? LocationCity,
-      string? LocationCountry,
-      Guid OwnerUserId,
-      DateTime CreatedAt,
-      // Type-specific
-      decimal? Price, // Regular
-      bool AllowNegotiation, // Regular
-      string? WantedItem,   // Swap
-      string? WantedItemDescription,  // Swap
-      decimal? MinPrice,   // Wanted
-      decimal? MaxPrice,  // Wanted
+{
+    public Guid Id { get; init; }
+    public ProductType Type { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
+    public Guid CategoryId { get; init; }
+    public ProductCondition? Condition { get; init; }
+    public string? LocationCity { get; init; }
+    public string? LocationCountry { get; init; }
+    public Guid OwnerUserId { get; init; }
+    public DateTime CreatedAt { get; init; }
 
-      //  ShippingResponse? Shipping,
-      List<UploadedImageResponse> Images,
-      string CoverImageUrl
-    );
+    // Type-specific
+    public decimal? Price { get; init; }          // Regular
+    public bool AllowNegotiation { get; init; }   // Regular
+    public string? WantedItem { get; init; }      // Swap
+    public string? WantedItemDescription { get; init; } // Swap
+    public decimal? MinPrice { get; init; }       // Wanted
+    public decimal? MaxPrice { get; init; }       // Wanted
+
+    public List<UploadedImageResponse> Images { get; init; } = [];
+    public string CoverImageUrl { get; init; } = string.Empty;
+}

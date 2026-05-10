@@ -28,7 +28,7 @@ public class ProductController : ControllerBase
     {
         var sellerId = User.GetBusinessId();
         var result = await _productService.CreateRegularProductAsync(request, sellerId);
-        return Ok(result);
+        return CreatedAtAction(nameof(GetById), new { productId = result.Id }, result);
 
     }
 
@@ -41,7 +41,7 @@ public class ProductController : ControllerBase
 
         var result = await _productService.CreateSwapProductAsync(request, sellerId);
 
-        return Ok(result);
+        return CreatedAtAction(nameof(GetById), new { productId = result.Id }, result);
     }
 
     [HttpPost("wanted")]
@@ -53,7 +53,7 @@ public class ProductController : ControllerBase
 
         var result = await _productService.CreateWantedProductAsync(request, sellerId);
 
-        return Ok(result);
+        return CreatedAtAction(nameof(GetById), new { productId = result.Id }, result);
     }
 
     [HttpGet("{productId:guid}")]
@@ -79,8 +79,8 @@ public class ProductController : ControllerBase
     [FromBody] UpdateRegularProductRequest request)
     {
         var userId = User.GetBusinessId();
-        var result = await _productService.UpdateRegularProductAsync(id, request, userId);
-        return Ok(result);
+        await _productService.UpdateRegularProductAsync(id, request, userId);
+        return NoContent();
     }
 
     [HttpPatch("swap/{id:guid}")]
@@ -89,8 +89,8 @@ public class ProductController : ControllerBase
         [FromBody] UpdateSwapProductRequest request)
     {
         var userId = User.GetBusinessId();
-        var result = await _productService.UpdateSwapProductAsync(id, request, userId);
-        return Ok(result);
+        await _productService.UpdateSwapProductAsync(id, request, userId);
+        return NoContent();
     }
 
     [HttpPatch("wanted/{id:guid}")]
@@ -99,8 +99,8 @@ public class ProductController : ControllerBase
         [FromBody] UpdateWantedProductRequest request)
     {
         var userId = User.GetBusinessId();
-        var result = await _productService.UpdateWantedProductAsync(id, request, userId);
-        return Ok(result);
+        await _productService.UpdateWantedProductAsync(id, request, userId);
+        return NoContent();
     }
 
 

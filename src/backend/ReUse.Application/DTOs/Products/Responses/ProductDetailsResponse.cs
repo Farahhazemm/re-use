@@ -1,36 +1,34 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ReUse.Application.DTOs.Products.Responses;
+﻿namespace ReUse.Application.DTOs.Products.Responses;
 
 public record ProductDetailsResponse
-(
-  Guid Id,
-  string Title,
-  string Description,
-  string Type,
-  string? Condition,
-  string Status,
-  string? LocationCity,
-    string? LocationCountry,
-// int Views,
-  decimal? Price,           //Rerular
-  bool? AllowNegotiation,  //Rerular
-  string WantedItemTitle, // Swap
-  string? WantedItemDescription,// Swap
-  string? WantedCondition,  // Swap
-  decimal? DesiredPriceMin, //Wanted
-  decimal? DesiredPriceMax, //Wanted
-  List<string> Images,
-  DateTime CreatedAt,
-  Guid CategoryId,
-  string CategoryName,
-  Guid OwnerUserId,
-  string OwnerUserName,
-  string MemberSince // => Owner.CreatedAt.ToString("MMMM yyyy")
-);
+{
+    public Guid Id { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
+    public string Type { get; init; } = string.Empty;
+    public string? Condition { get; init; }
+    public string Status { get; init; } = string.Empty;
+    public string? LocationCity { get; init; }
+    public string? LocationCountry { get; init; }
 
-// TODO : OwnerUserData (bool   Verified , double Rating , int TotalReviews , string ResponseRate , string ResponseTime )
+    // Regular
+    public decimal? Price { get; init; }
+    public bool? AllowNegotiation { get; init; }
+
+    // Swap
+    public string? WantedItemTitle { get; init; }
+    public string? WantedItemDescription { get; init; }
+    public string? WantedCondition { get; init; }
+
+    // Wanted
+    public decimal? DesiredPriceMin { get; init; }
+    public decimal? DesiredPriceMax { get; init; }
+
+    public List<string> Images { get; init; } = [];
+    public DateTime CreatedAt { get; init; }
+    public Guid CategoryId { get; init; }
+    public string CategoryName { get; init; } = string.Empty;
+    public Guid OwnerUserId { get; init; }
+    public string OwnerUserName { get; init; } = string.Empty;
+    public string MemberSince { get; init; } = string.Empty;
+}

@@ -19,9 +19,9 @@ public interface IProductService
     public Task<ProductResponse> CreateSwapProductAsync(CreateSwapProductRequest request, Guid sellerId);
     public Task<ProductResponse> CreateWantedProductAsync(CreateWantedProductRequest request, Guid sellerId);
 
-    Task<ProductResponse> UpdateRegularProductAsync(Guid productId, UpdateRegularProductRequest request, Guid userId);
-    Task<ProductResponse> UpdateSwapProductAsync(Guid productId, UpdateSwapProductRequest request, Guid userId);
-    Task<ProductResponse> UpdateWantedProductAsync(Guid productId, UpdateWantedProductRequest request, Guid userId);
+    Task UpdateRegularProductAsync(Guid productId, UpdateRegularProductRequest request, Guid userId);
+    Task UpdateSwapProductAsync(Guid productId, UpdateSwapProductRequest request, Guid userId);
+    Task UpdateWantedProductAsync(Guid productId, UpdateWantedProductRequest request, Guid userId);
 
 
     Task<ProductDetailsResponse> GetByIdAsync(Guid productId);

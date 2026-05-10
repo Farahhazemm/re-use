@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using AutoMapper;
+
+using Microsoft.AspNetCore.Http;
 
 using ReUse.Application.DTOs;
 using ReUse.Application.DTOs.Products;
@@ -16,11 +18,13 @@ public class ProductService : IProductService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IProductImageService _productImageService;
+    private readonly IMapper _mapper;
 
-    public ProductService(IUnitOfWork unitOfWork, IProductImageService productImageService)
+    public ProductService(IUnitOfWork unitOfWork, IProductImageService productImageService, IMapper mapper)
     {
         _unitOfWork = unitOfWork;
         _productImageService = productImageService;
+        _mapper = mapper;
     }
 
     #region Create
@@ -37,18 +41,8 @@ public class ProductService : IProductService
 
         await EnsureLeafCategory(request.BasicInfo.CategoryId);
 
-        var product = new RegularProduct
-        {
-            Title = request.BasicInfo.Title,
-            Description = request.BasicInfo.Description,
-            CategoryId = request.BasicInfo.CategoryId,
-            Condition = request.BasicInfo.Condition,
-            LocationCity = request.BasicInfo.LocationCity,
-            LocationCountry = request.BasicInfo.LocationCountry,
-            OwnerUserId = sellerId,
-            Price = request.Price,
-            AllowNegotiation = request.AllowNegotiation
-        };
+        var product = _mapper.Map<RegularProduct>(request);
+        product.OwnerUserId = sellerId;
 
         return await PersistProductAsync(product, request.Images);
     }
@@ -69,18 +63,8 @@ public class ProductService : IProductService
 
         await EnsureLeafCategory(request.BasicInfo.CategoryId);
 
-        var product = new SwapProduct
-        {
-            Title = request.BasicInfo.Title,
-            Description = request.BasicInfo.Description,
-            CategoryId = request.BasicInfo.CategoryId,
-            Condition = request.BasicInfo.Condition,
-            LocationCity = request.BasicInfo.LocationCity,
-            LocationCountry = request.BasicInfo.LocationCountry,
-            OwnerUserId = sellerId,
-            WantedItemTitle = request.WantedItemTitle,
-            WantedItemDescription = request.WantedItemDescription
-        };
+        var product = _mapper.Map<SwapProduct>(request);
+        product.OwnerUserId = sellerId;
 
         return await PersistSwapProductAsync(
             product,
@@ -101,18 +85,8 @@ public class ProductService : IProductService
 
         await EnsureLeafCategory(request.BasicInfo.CategoryId);
 
-        var product = new WantedProduct
-        {
-            Title = request.BasicInfo.Title,
-            Description = request.BasicInfo.Description,
-            CategoryId = request.BasicInfo.CategoryId,
-            Condition = request.BasicInfo.Condition,
-            LocationCity = request.BasicInfo.LocationCity,
-            LocationCountry = request.BasicInfo.LocationCountry,
-            OwnerUserId = sellerId,
-            DesiredPriceMin = request.DesiredPriceMin,
-            DesiredPriceMax = request.DesiredPriceMax
-        };
+        var product = _mapper.Map<WantedProduct>(request);
+        product.OwnerUserId = sellerId;
 
         return await PersistProductAsync(product, request.Images);
     }
@@ -128,21 +102,20 @@ public class ProductService : IProductService
         var product = await _unitOfWork.Product.GetProductDetailsAsync(productId);
 
         if (product is null)
-            throw new NotFoundException("Product not found.");
+            throw new NotFoundException("Product");
 
-        return MapToDetails(product);
+        return _mapper.Map<ProductDetailsResponse>(product);
     }
     #endregion
 
     #region GetAll
-    public async Task<PagedResult<ProductResponse>> GetAllProductsAsync(
-  ProductFilterParams filterParams)
+    public async Task<PagedResult<ProductResponse>> GetAllProductsAsync(ProductFilterParams filterParams)
     {
         var pagedProducts = await _unitOfWork.Product.GetAllAsync(filterParams);
 
         return new PagedResult<ProductResponse>
         {
-            Data = pagedProducts.Data.Select(MapToProductResponse).ToList(),
+            Data = pagedProducts.Data.Select(p => _mapper.Map<ProductResponse>(p)).ToList(),
             PageNumber = pagedProducts.PageNumber,
             PageSize = pagedProducts.PageSize,
             TotalRecords = pagedProducts.TotalRecords
@@ -152,13 +125,13 @@ public class ProductService : IProductService
 
     #region Update
 
-    public async Task<ProductResponse> UpdateRegularProductAsync(
+    public async Task UpdateRegularProductAsync(
         Guid productId,
         UpdateRegularProductRequest request,
         Guid userId)
     {
         var product = await _unitOfWork.Product.GetByIdAsync(productId)
-            ?? throw new NotFoundException("Product not found");
+            ?? throw new NotFoundException("Product");
 
         // Business Rules
         if (product.OwnerUserId != userId)
@@ -171,16 +144,7 @@ public class ProductService : IProductService
 
         var regular = (RegularProduct)product;
 
-        // Apply BasicInfo
-        if (request.BasicInfo is not null)
-            await ApplyBasicInfoUpdate(regular, request.BasicInfo);
-
-        // Apply type-specific fields
-        if (request.Price is not null)
-            regular.Price = request.Price.Value;
-
-        if (request.AllowNegotiation is not null)
-            regular.AllowNegotiation = request.AllowNegotiation.Value;
+        _mapper.Map(request, regular);
 
         // Post-update validation
         if (regular.Price <= 0)
@@ -188,16 +152,15 @@ public class ProductService : IProductService
 
         await _unitOfWork.SaveChangesAsync();
 
-        return MapRegularProduct(regular);
     }
 
-    public async Task<ProductResponse> UpdateSwapProductAsync(
+    public async Task UpdateSwapProductAsync(
         Guid productId,
         UpdateSwapProductRequest request,
         Guid userId)
     {
         var product = await _unitOfWork.Product.GetByIdAsync(productId)
-            ?? throw new NotFoundException("Product not found");
+            ?? throw new NotFoundException("Product");
 
         if (product.OwnerUserId != userId)
             throw new ForbiddenException("You don't own this product");
@@ -209,14 +172,7 @@ public class ProductService : IProductService
 
         var swap = (SwapProduct)product;
 
-        if (request.BasicInfo is not null)
-            await ApplyBasicInfoUpdate(swap, request.BasicInfo);
-
-        if (request.WantedItemTitle is not null)
-            swap.WantedItemTitle = request.WantedItemTitle;
-
-        if (request.WantedItemDescription is not null)
-            swap.WantedItemDescription = request.WantedItemDescription;
+        _mapper.Map(request, swap);
 
         // Post-update validation
         if (string.IsNullOrWhiteSpace(swap.WantedItemTitle))
@@ -224,16 +180,15 @@ public class ProductService : IProductService
 
         await _unitOfWork.SaveChangesAsync();
 
-        return MapSwapProduct(swap, 0);
     }
 
-    public async Task<ProductResponse> UpdateWantedProductAsync(
+    public async Task UpdateWantedProductAsync(
         Guid productId,
         UpdateWantedProductRequest request,
         Guid userId)
     {
         var product = await _unitOfWork.Product.GetByIdAsync(productId)
-            ?? throw new NotFoundException("Product not found");
+            ?? throw new NotFoundException("Product");
 
         if (product.OwnerUserId != userId)
             throw new ForbiddenException("You don't own this product");
@@ -245,14 +200,7 @@ public class ProductService : IProductService
 
         var wanted = (WantedProduct)product;
 
-        if (request.BasicInfo is not null)
-            await ApplyBasicInfoUpdate(wanted, request.BasicInfo);
-
-        if (request.DesiredPriceMin is not null)
-            wanted.DesiredPriceMin = request.DesiredPriceMin.Value;
-
-        if (request.DesiredPriceMax is not null)
-            wanted.DesiredPriceMax = request.DesiredPriceMax.Value;
+        _mapper.Map(request, wanted);
 
         // Post-update validation
         if (wanted.DesiredPriceMin.HasValue &&
@@ -261,33 +209,6 @@ public class ProductService : IProductService
             throw new BadRequestException("Maximum price must be >= minimum price after update");
 
         await _unitOfWork.SaveChangesAsync();
-
-        return MapWantedProduct(wanted);
-    }
-
-    // Helper Shared Method to Apply Basic Info Updates
-    private async Task ApplyBasicInfoUpdate(Product product, BasicInfoUpdateRequest info)
-    {
-        if (info.Title is not null)
-            product.Title = info.Title;
-
-        if (info.Description is not null)
-            product.Description = info.Description;
-
-        if (info.LocationCity is not null)
-            product.LocationCity = info.LocationCity;
-
-        if (info.LocationCountry is not null)
-            product.LocationCountry = info.LocationCountry;
-
-        if (info.CategoryId.HasValue)
-        {
-            await EnsureLeafCategory(info.CategoryId.Value);
-            product.CategoryId = info.CategoryId.Value;
-        }
-
-        if (info.Condition.HasValue)
-            product.Condition = info.Condition.Value;
     }
 
     #endregion
@@ -300,13 +221,9 @@ public class ProductService : IProductService
 
 
         var product = await _unitOfWork.Product.GetByIdAsync(productId)
-            ?? throw new NotFoundException("Product not found");
+            ?? throw new NotFoundException("Product");
 
         EnsureNotDeleted(product);
-
-        // already deleted
-        if (product.Status == ProductStatus.Deleted)
-            throw new NotFoundException("Product not found");
 
         product.Status = ProductStatus.Deleted;
 
@@ -318,7 +235,7 @@ public class ProductService : IProductService
     private static void EnsureNotDeleted(Product product)
     {
         if (product.Status == ProductStatus.Deleted)
-            throw new NotFoundException("Product not found");
+            throw new NotFoundException("Product");
     }
     #endregion
 
@@ -373,7 +290,7 @@ public class ProductService : IProductService
 
             var fullProduct = await _unitOfWork.Product.GetByIdAsync(product.Id) ?? product;
 
-            return MapSwapProduct((SwapProduct)fullProduct, offerCount);
+            return _mapper.Map<ProductResponse>(fullProduct);
         }
         catch
         {
@@ -419,13 +336,7 @@ public class ProductService : IProductService
             var fullProduct = await _unitOfWork.Product
                 .GetByIdAsync(product.Id) ?? product;
 
-            return fullProduct.ProductType switch
-            {
-                ProductType.Regular => MapRegularProduct((RegularProduct)fullProduct),
-                ProductType.Swap => MapSwapProduct((SwapProduct)fullProduct, 0), // fallback
-                ProductType.Wanted => MapWantedProduct((WantedProduct)fullProduct),
-                _ => throw new InvalidOperationException("Unknown product type")
-            };
+            return _mapper.Map<ProductResponse>(fullProduct);
         }
         catch
         {
@@ -443,7 +354,7 @@ public class ProductService : IProductService
         var category = await _unitOfWork.Category.GetByIdAsync(categoryId);
 
         if (category is null)
-            throw new NotFoundException("Category not found");
+            throw new NotFoundException("Category");
 
         if (category.ParentId is null)
             throw new BadRequestException("Category must be a subcategory");
@@ -451,236 +362,4 @@ public class ProductService : IProductService
 
     #endregion
 
-    #region MAPPING 
-
-    private static ProductResponse MapToProductResponse(Product product)
-    {
-        var images = product.ProductImages
-            .OrderBy(i => i.DisplayOrder)
-            .Select(i => new UploadedImageResponse(i.Id, i.Url, i.PublicId))
-            .ToList();
-
-        decimal? price = null;
-        bool allowNegotiation = false;
-        string? wantedItem = null;
-        string? wantedItemDesc = null;
-        decimal? minPrice = null;
-        decimal? maxPrice = null;
-
-        switch (product)
-        {
-            case RegularProduct r:
-                price = r.Price;
-                allowNegotiation = r.AllowNegotiation;
-                break;
-
-            case SwapProduct s:
-                wantedItem = s.WantedItemTitle;
-                wantedItemDesc = s.WantedItemDescription;
-                break;
-
-            case WantedProduct w:
-                minPrice = w.DesiredPriceMin;
-                maxPrice = w.DesiredPriceMax;
-                break;
-        }
-
-        return new ProductResponse(
-            Id: product.Id,
-            Type: product.ProductType,
-            Title: product.Title,
-            Description: product.Description,
-            CategoryId: product.CategoryId,
-            Condition: product.Condition,
-            LocationCity: product.LocationCity,
-            LocationCountry: product.LocationCountry,
-            OwnerUserId: product.OwnerUserId,
-            CreatedAt: product.CreatedAt,
-            Price: price,
-            AllowNegotiation: allowNegotiation,
-            WantedItem: wantedItem,
-            WantedItemDescription: wantedItemDesc,
-            MinPrice: minPrice,
-            MaxPrice: maxPrice,
-            Images: images,
-            CoverImageUrl: images.FirstOrDefault()?.Url ?? string.Empty
-        );
-    }
-
-
-    private ProductResponse MapRegularProduct(RegularProduct product)
-    {
-        var images = MapImages(product);
-
-        return new ProductResponse(
-            product.Id,
-            product.ProductType,
-            product.Title,
-            product.Description,
-            product.CategoryId,
-            product.Condition,
-            product.LocationCity,
-            product.LocationCountry,
-            product.OwnerUserId,
-            product.CreatedAt,
-            product.Price,
-            product.AllowNegotiation,
-            null,
-            null,
-            null,
-            null,
-            images,
-            images.FirstOrDefault()?.Url ?? string.Empty
-        );
-    }
-
-    private ProductResponse MapWantedProduct(WantedProduct product)
-    {
-        var images = MapImages(product);
-
-        return new ProductResponse(
-            product.Id,
-            product.ProductType,
-            product.Title,
-            product.Description,
-            product.CategoryId,
-            product.Condition,
-            product.LocationCity,
-            product.LocationCountry,
-            product.OwnerUserId,
-            product.CreatedAt,
-            null,
-            false,
-            null,
-            null,
-            product.DesiredPriceMin,
-            product.DesiredPriceMax,
-            images,
-            images.FirstOrDefault()?.Url ?? string.Empty
-        );
-    }
-
-    private ProductResponse MapSwapProduct(SwapProduct product, int offerCount)
-    {
-        var images = product.ProductImages ?? new List<ProductImage>();
-
-        var offerImages = images.Take(offerCount)
-            .Select(i => new UploadedImageResponse(i.Id, i.Url, i.PublicId))
-            .ToList();
-
-        var wantedImages = images.Skip(offerCount)
-            .Select(i => new UploadedImageResponse(i.Id, i.Url, i.PublicId))
-            .ToList();
-
-        var allImages = offerImages.Concat(wantedImages).ToList();
-
-        return new ProductResponse(
-            product.Id,
-            product.ProductType,
-            product.Title,
-            product.Description,
-            product.CategoryId,
-            product.Condition,
-            product.LocationCity,
-            product.LocationCountry,
-            product.OwnerUserId,
-            product.CreatedAt,
-            null,
-            false,
-            product.WantedItemTitle,
-            product.WantedItemDescription,
-            null,
-            null,
-            allImages,
-            offerImages.FirstOrDefault()?.Url ?? string.Empty
-        );
-    }
-
-    private List<UploadedImageResponse> MapImages(Product product)
-    {
-        return product.ProductImages?
-            .Select(i => new UploadedImageResponse(i.Id, i.Url, i.PublicId))
-            .ToList() ?? new List<UploadedImageResponse>();
-    }
-
-    private static ProductDetailsResponse MapToDetails(Product product)
-    {
-        var images = product.ProductImages
-            .OrderBy(i => i.DisplayOrder)
-            .Select(i => i.Url)
-            .ToList();
-
-        // CategoryId = subcategory when present, root category otherwise
-        var categoryId = product.CategoryId;
-        var categoryName = product.Category.Name;
-
-        //  Type-specific fields 
-        decimal? price = null;
-        bool? allowNegotiation = null;
-        string? wantedItemTitle = null;
-        string? wantedItemDesc = null;
-        string? wantedCondition = null;
-        decimal? desiredPriceMin = null;
-        decimal? desiredPriceMax = null;
-
-        switch (product)
-        {
-            case RegularProduct r:
-                price = r.Price;
-                allowNegotiation = r.AllowNegotiation;
-                break;
-
-            case SwapProduct s:
-                wantedItemTitle = s.WantedItemTitle;
-                wantedItemDesc = s.WantedItemDescription;
-                wantedCondition = FormatCondition(s.WantedCondition);
-                break;
-
-            case WantedProduct w:
-                desiredPriceMin = w.DesiredPriceMin;
-                desiredPriceMax = w.DesiredPriceMax;
-                break;
-        }
-
-        return new ProductDetailsResponse(
-        Id: product.Id,
-        Title: product.Title,
-        Description: product.Description,
-        Type: product.ProductType.ToString(),
-        Condition: FormatCondition(product.Condition),
-        Status: product.Status.ToString().ToLower(),
-
-        LocationCity: product.LocationCity,
-        LocationCountry: product.LocationCountry,
-
-        Price: price,
-        AllowNegotiation: allowNegotiation,
-
-        WantedItemTitle: wantedItemTitle,
-        WantedItemDescription: wantedItemDesc,
-        WantedCondition: wantedCondition,
-
-        DesiredPriceMin: desiredPriceMin,
-        DesiredPriceMax: desiredPriceMax,
-
-        Images: images,
-        CreatedAt: product.CreatedAt,
-        CategoryId: categoryId,
-        CategoryName: categoryName,
-        OwnerUserId: product.OwnerUserId,
-        OwnerUserName: product.Owner.FullName,
-        MemberSince: product.Owner.CreatedAt.ToString("MMMM yyyy")
-);
-    }
-    // Formatter
-    private static string FormatCondition(ProductCondition? condition) => condition switch
-    {
-        ProductCondition.New => "New",
-        ProductCondition.LikeNew => "Like New",
-        ProductCondition.Used => "Used",
-        ProductCondition.Broken => "Broken",
-        _ => condition.ToString()
-    };
-
 }
-#endregion
