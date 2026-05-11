@@ -1,9 +1,14 @@
 ﻿namespace ReUse.Application.DTOs.Categories;
 
-public record CategoryFollowResponse(
-    Guid CategoryId,
-    string Name,
-    string Slug,
-    string? IconUrl,
-    DateTime FollowedAt
-);
+public record CategoryFollowResponse
+{
+    public Guid CategoryId { get; init; }
+
+    public string Name { get; init; } = default!;
+
+    public string Slug { get; init; } = default!;
+
+    public string? IconUrl { get; init; }
+
+    public DateTime FollowedAt { get; init; }
+}
