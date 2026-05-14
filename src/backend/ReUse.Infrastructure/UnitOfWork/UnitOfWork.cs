@@ -21,6 +21,7 @@ public class UnitOfWork : IUnitOfWork
         ProductImages = new ProductImageRepository(_context);
         CategoryFollow = new CategoryFollowRepository(_context);
         Product = new ProductRepository(_context);
+        Notifications = new NotificationRepository(_context);
     }
     public IUserRepository User { get; private set; }
 
@@ -31,6 +32,8 @@ public class UnitOfWork : IUnitOfWork
     public ICategoryRepository Category { get; private set; }
 
     public ICategoryFollowRepository CategoryFollow { get; private set; }
+
+    public INotificationRepository Notifications { get; private set; }
 
     public async Task CommitTransactionAsync()
     {

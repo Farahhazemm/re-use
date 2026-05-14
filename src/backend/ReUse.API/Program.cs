@@ -1,6 +1,7 @@
 using ReUse.API.Extensions;
 using ReUse.Application;
 using ReUse.Infrastructure;
+using ReUse.Infrastructure.Notifications.SignalR;
 
 using Serilog;
 
@@ -47,6 +48,8 @@ public class Program
         }
 
         app.UsePipeline();
+
+        app.MapHub<NotificationHub>("/hubs/notifications");
 
         app.Run();
     }

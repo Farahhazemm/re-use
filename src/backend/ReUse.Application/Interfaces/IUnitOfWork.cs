@@ -16,6 +16,8 @@ public interface IUnitOfWork : IDisposable
 
     ICategoryFollowRepository CategoryFollow { get; }
 
+    INotificationRepository Notifications { get; }
+
     Task<int> SaveChangesAsync();
     void Dispose();
 }

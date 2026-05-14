@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ReUse.Infrastructure.Persistence;
@@ -11,13 +12,15 @@ using ReUse.Infrastructure.Persistence;
 namespace ReUse.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260514013457_UpdateNotificationDataToJsonString")]
+    partial class UpdateNotificationDataToJsonString
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.15")
+                .HasAnnotation("ProductVersion", "9.0.16")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -130,8 +133,6 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                     b.ToTable("Follow", (string)null);
                 });
 
-<<<<<<< Updated upstream
-=======
             modelBuilder.Entity("ReUse.Domain.Entities.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -247,7 +248,6 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                     b.ToTable("notification_deliveries", (string)null);
                 });
 
->>>>>>> Stashed changes
             modelBuilder.Entity("ReUse.Domain.Entities.Order", b =>
                 {
                     b.Property<Guid>("Id")
@@ -533,6 +533,49 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("ReUse.Domain.Entities.UserNotificationSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("NotificationType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<TimeOnly?>("QuietHoursEnd")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<TimeOnly?>("QuietHoursStart")
+                        .HasColumnType("time without time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "NotificationType", "Channel")
+                        .IsUnique();
+
+                    b.ToTable("user_notification_settings", (string)null);
+                });
+
             modelBuilder.Entity("ReUse.Domain.Entities.RegularProduct", b =>
                 {
                     b.HasBaseType("ReUse.Domain.Entities.Product");
@@ -631,6 +674,28 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                     b.Navigation("FollowingUser");
                 });
 
+            modelBuilder.Entity("ReUse.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("ReUse.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ReUse.Domain.Entities.NotificationDelivery", b =>
+                {
+                    b.HasOne("ReUse.Domain.Entities.Notification", "Notification")
+                        .WithMany("Deliveries")
+                        .HasForeignKey("NotificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Notification");
+                });
+
             modelBuilder.Entity("ReUse.Domain.Entities.Order", b =>
                 {
                     b.HasOne("ReUse.Domain.Entities.User", "Buyer")
@@ -695,11 +760,27 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("ReUse.Domain.Entities.UserNotificationSetting", b =>
+                {
+                    b.HasOne("ReUse.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ReUse.Domain.Entities.Category", b =>
                 {
                     b.Navigation("Followers");
 
                     b.Navigation("Subcategories");
+                });
+
+            modelBuilder.Entity("ReUse.Domain.Entities.Notification", b =>
+                {
+                    b.Navigation("Deliveries");
                 });
 
             modelBuilder.Entity("ReUse.Domain.Entities.Product", b =>

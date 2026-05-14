@@ -69,6 +69,7 @@ public static class DependencyInjection
         services.AddScoped<ICategoryFollowRepository,
         CategoryFollowRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
         #endregion
 
         #region Services
@@ -84,6 +85,7 @@ public static class DependencyInjection
         AccountService>();
         services.AddScoped<IAuthorizationHandler,
         ActiveUserHandler>();
+        services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
 
         #endregion
 
@@ -104,6 +106,8 @@ public static class DependencyInjection
         services.AddMemoryCache();
         services.AddSingleton<IAppCache, MemoryCacheService>();
         #endregion
+
+        services.AddSignalR();
 
         return services;
     }

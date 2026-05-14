@@ -7,6 +7,7 @@ using ReUse.Application.Exceptions;
 using ReUse.Application.Interfaces;
 using ReUse.Application.Interfaces.Services;
 using ReUse.Domain.Entities;
+using ReUse.Domain.Enums;
 
 
 namespace ReUse.Application.Services;
@@ -15,10 +16,12 @@ public class FollowService : IFollowService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
-    public FollowService(IUnitOfWork unitOfWork, IMapper mapper)
+    private readonly INotificationPublisher _notificationPublisher;
+    public FollowService(IUnitOfWork unitOfWork, IMapper mapper, INotificationPublisher notificationPublisher)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _notificationPublisher = notificationPublisher;
     }
     public async Task<PagedResult<FollowDto>> GetFollowersAsync(Guid userId, UserFilterParams filterParams)
     {
@@ -81,6 +84,15 @@ public class FollowService : IFollowService
         _unitOfWork.Follow.Add(follow);
         await _unitOfWork.SaveChangesAsync();
 
+        // notification 
+        await _notificationPublisher.PublishAsync(
+         userId: targetUserId,
+         type: NotificationType.FollowActivity,
+         title: "New Follow",
+         body: "Someone followed you",
+          data: new { followerId = currentUserId }
+          );
+
         // Populate navigation property => AutoMapper can read FollowingUser
         follow.FollowingUser = targetUser;
 
@@ -106,7 +118,6 @@ public class FollowService : IFollowService
         if (currentUserId == followerUserId)
             throw new BadRequestException("You cannot remove yourself as a follower.");
 
-        // The follower is following ME — so followerUserId is the follower, currentUserId is the following
         var follow = await _unitOfWork.Follow.GetFollowAsync(followerUserId, currentUserId)
             ?? throw new NotFoundException("This user is not following you.");
 
