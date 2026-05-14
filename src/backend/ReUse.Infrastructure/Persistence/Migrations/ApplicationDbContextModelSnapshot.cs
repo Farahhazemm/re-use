@@ -130,8 +130,6 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                     b.ToTable("Follow", (string)null);
                 });
 
-<<<<<<< Updated upstream
-=======
             modelBuilder.Entity("ReUse.Domain.Entities.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -247,7 +245,6 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                     b.ToTable("notification_deliveries", (string)null);
                 });
 
->>>>>>> Stashed changes
             modelBuilder.Entity("ReUse.Domain.Entities.Order", b =>
                 {
                     b.Property<Guid>("Id")
