@@ -21,6 +21,10 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<CategoryFollow> CategoryFollows { get; set; }
 
+    public DbSet<Notification> Notifications { get; set; }
+    public DbSet<NotificationDelivery> NotificationDeliveries { get; set; }
+    public DbSet<UserNotificationSetting> UserNotificationSettings { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
