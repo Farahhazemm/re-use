@@ -148,4 +148,14 @@ public static class ProductQueryExtensions
                 query.OrderByDescending(p => p.CreatedAt)
         };
     }
+
+    public static IQueryable<Product> FilterByStatus(
+    this IQueryable<Product> query,
+    ProductStatus? status)
+    {
+        if (!status.HasValue)
+            return query;
+
+        return query.Where(p => p.Status == status.Value);
+    }
 }

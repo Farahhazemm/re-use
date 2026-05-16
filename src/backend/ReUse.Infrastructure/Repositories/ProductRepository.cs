@@ -74,26 +74,24 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
 
     #region GetMyListingsAsync
     public async Task<PagedResult<Product>> GetMyListingsAsync(
-Guid ownerId,
-MyListingsParams filterParams)
-    {
-        var query = _context.Products
+        Guid ownerId,
+        MyListingsParams filterParams)
+        => await _context.Products
             .AsNoTracking()
-            .Include(p => p.ProductImages.OrderBy(i => i.DisplayOrder))
+            .Include(p => p.ProductImages)
             .Include(p => p.Owner)
-            .Where(p => p.OwnerUserId == ownerId);
-
-        // Status filter => null means all statuses
-        if (filterParams.MappedStatus.HasValue)
-            query = query.Where(p => p.Status == filterParams.MappedStatus.Value);
-
-        query = query.OrderByDescending(p => p.CreatedAt);
-
-        return await query.ToPagedListAsync(
-            filterParams.Pagination.PageNumber,
-            filterParams.Pagination.PageSize);
-    }
-
+            .Where(p => p.OwnerUserId == ownerId)
+            .FilterByStatus(filterParams.Status)   // seller only
+            .Search(filterParams.SearchTerm)
+            .FilterByTypes(filterParams.Types)
+            .FilterByConditions(filterParams.Conditions)
+            .FilterByCategories(filterParams.CategoryIds)
+            .FilterByPrice(filterParams.MinPrice, filterParams.MaxPrice)
+            .FilterByLocation(filterParams.Location)
+            .ApplySort(filterParams.SortBy, filterParams.SortDirection)
+            .ToPagedListAsync(
+                filterParams.Pagination.PageNumber,
+                filterParams.Pagination.PageSize);
     #endregion
 
     #region GetSellerSummaryAsync
@@ -116,16 +114,22 @@ MyListingsParams filterParams)
     #region GetPublicProductsByUserAsync
     public async Task<PagedResult<Product>> GetPublicProductsByUserAsync(
         Guid ownerId,
-        PaginationParams pagination)
+        ProductFilterParams filterParams)
         => await _context.Products
             .AsNoTracking()
             .Include(p => p.ProductImages)
             .Include(p => p.Owner)
             .Where(p => p.OwnerUserId == ownerId
                      && p.Status == ProductStatus.Active)
-            .OrderByDescending(p => p.CreatedAt)
+            .Search(filterParams.SearchTerm)
+            .FilterByTypes(filterParams.Types)
+            .FilterByConditions(filterParams.Conditions)
+            .FilterByCategories(filterParams.CategoryIds)
+            .FilterByPrice(filterParams.MinPrice, filterParams.MaxPrice)
+            .FilterByLocation(filterParams.Location)
+            .ApplySort(filterParams.SortBy, filterParams.SortDirection)
             .ToPagedListAsync(
-                pagination.PageNumber,
-                pagination.PageSize);
+                filterParams.Pagination.PageNumber,
+                filterParams.Pagination.PageSize);
     #endregion
 }

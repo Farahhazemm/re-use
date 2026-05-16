@@ -30,7 +30,7 @@ public interface IProductService
 
     Task<SellerDashboardResponse> GetMyListingsAsync(Guid userId, MyListingsParams filterParams);
 
-    Task<PagedResult<ProductResponse>> GetPublicProductsByUserAsync(Guid ownerId, PaginationParams pagination);
+    Task<PagedResult<ProductResponse>> GetPublicProductsByUserAsync(Guid ownerId, ProductFilterParams filter);
 
     Task DeleteProductAsync(Guid productId, Guid userId);
 

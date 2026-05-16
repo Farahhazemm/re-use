@@ -87,9 +87,9 @@ public class ProductController : ControllerBase
     [AllowAnonymous]
     [ProducesResponseType(typeof(PagedResult<ProductResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> GetProductsByUser(Guid userId, [FromQuery] PaginationParams pagination)
+    public async Task<IActionResult> GetProductsByUser(Guid userId, [FromQuery] ProductFilterParams filter)
     {
-        var result = await _productService.GetPublicProductsByUserAsync(userId, pagination);
+        var result = await _productService.GetPublicProductsByUserAsync(userId, filter);
 
         return Ok(result);
     }

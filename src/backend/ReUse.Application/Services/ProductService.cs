@@ -141,13 +141,13 @@ public class ProductService : IProductService
     #endregion
 
     #region  GetPublicProductsByUser
-    public async Task<PagedResult<ProductResponse>> GetPublicProductsByUserAsync(Guid ownerId, PaginationParams pagination)
+    public async Task<PagedResult<ProductResponse>> GetPublicProductsByUserAsync(Guid ownerId, ProductFilterParams filterParams)
     {
         if (ownerId == Guid.Empty)
             throw new BadRequestException("Invalid user id");
 
         var pagedProducts = await _unitOfWork.Product
-            .GetPublicProductsByUserAsync(ownerId, pagination);
+            .GetPublicProductsByUserAsync(ownerId, filterParams);
 
         return new PagedResult<ProductResponse>
         {
