@@ -195,6 +195,13 @@ public class ProductProfile : Profile
 
         #endregion
 
+        #region sellerProducts
+        CreateMap<SellerSummary, SellerSummaryResponse>()
+          .ForMember(dest => dest.TotalProducts, opt => opt.MapFrom(src => src.Total))
+          .ForMember(dest => dest.ActiveCount, opt => opt.MapFrom(src => src.Active))
+          .ForMember(dest => dest.SoldCount, opt => opt.MapFrom(src => src.Sold));
+        #endregion
+
         #endregion
     }
 }

@@ -123,6 +123,42 @@ public class ProductService : IProductService
     }
     #endregion
 
+    #region GetMyLists
+    public async Task<SellerDashboardResponse> GetMyListingsAsync(Guid userId, MyListingsParams filterParams)
+    {
+        var pagedListings = await _unitOfWork.Product.GetMyListingsAsync(userId, filterParams);
+
+        var summary = await _unitOfWork.Product.GetSellerSummaryAsync(userId);
+
+        return new SellerDashboardResponse
+        {
+            Summary = _mapper.Map<SellerSummaryResponse>(summary),
+            Products = pagedListings.Data
+                .Select(p => _mapper.Map<ProductResponse>(p))
+                .ToList()
+        };
+    }
+    #endregion
+
+    #region  GetPublicProductsByUser
+    public async Task<PagedResult<ProductResponse>> GetPublicProductsByUserAsync(Guid ownerId, PaginationParams pagination)
+    {
+        if (ownerId == Guid.Empty)
+            throw new BadRequestException("Invalid user id");
+
+        var pagedProducts = await _unitOfWork.Product
+            .GetPublicProductsByUserAsync(ownerId, pagination);
+
+        return new PagedResult<ProductResponse>
+        {
+            Data = pagedProducts.Data.Select(p => _mapper.Map<ProductResponse>(p)).ToList(),
+            PageNumber = pagedProducts.PageNumber,
+            PageSize = pagedProducts.PageSize,
+            TotalRecords = pagedProducts.TotalRecords
+        };
+    }
+    #endregion
+
     #region Update
 
     public async Task UpdateRegularProductAsync(

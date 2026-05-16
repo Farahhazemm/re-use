@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 using ReUse.Application.DTOs;
 using ReUse.Application.DTOs.Products;
+using ReUse.Application.DTOs.Products.Responses;
 using ReUse.Application.Interfaces.Repository;
 using ReUse.Domain.Entities;
 using ReUse.Domain.Enums;
@@ -69,5 +70,62 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
         => await _context.Products
             .AsNoTracking()
             .CountAsync(p => p.Status == ProductStatus.Active && p.CategoryId == categoryId);
+    #endregion
+
+    #region GetMyListingsAsync
+    public async Task<PagedResult<Product>> GetMyListingsAsync(
+Guid ownerId,
+MyListingsParams filterParams)
+    {
+        var query = _context.Products
+            .AsNoTracking()
+            .Include(p => p.ProductImages.OrderBy(i => i.DisplayOrder))
+            .Include(p => p.Owner)
+            .Where(p => p.OwnerUserId == ownerId);
+
+        // Status filter => null means all statuses
+        if (filterParams.MappedStatus.HasValue)
+            query = query.Where(p => p.Status == filterParams.MappedStatus.Value);
+
+        query = query.OrderByDescending(p => p.CreatedAt);
+
+        return await query.ToPagedListAsync(
+            filterParams.Pagination.PageNumber,
+            filterParams.Pagination.PageSize);
+    }
+
+    #endregion
+
+    #region GetSellerSummaryAsync
+    public async Task<SellerSummary> GetSellerSummaryAsync(Guid ownerId)
+    {
+        var counts = await _context.Products
+            .AsNoTracking()
+            .Where(p => p.OwnerUserId == ownerId)
+            .GroupBy(_ => 1)                     // singlepass aggregation
+            .Select(g => new SellerSummary(
+                g.Count(),
+                g.Count(p => p.Status == ProductStatus.Active),
+                g.Count(p => p.Status == ProductStatus.Sold)))
+            .FirstOrDefaultAsync();
+
+        return counts ?? new SellerSummary(0, 0, 0);
+    }
+    #endregion
+
+    #region GetPublicProductsByUserAsync
+    public async Task<PagedResult<Product>> GetPublicProductsByUserAsync(
+        Guid ownerId,
+        PaginationParams pagination)
+        => await _context.Products
+            .AsNoTracking()
+            .Include(p => p.ProductImages)
+            .Include(p => p.Owner)
+            .Where(p => p.OwnerUserId == ownerId
+                     && p.Status == ProductStatus.Active)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToPagedListAsync(
+                pagination.PageNumber,
+                pagination.PageSize);
     #endregion
 }

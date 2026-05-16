@@ -97,11 +97,13 @@ public class AdminCategoriesController : ControllerBase
     }
 
     [HttpPatch("{id}/icon")]
+    [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> UploadIcon(Guid id, [FromForm] IFormFile icon)
+    public async Task<IActionResult> UploadIcon(Guid id, [FromForm] UploadIconRequest request)
     {
+        var icon = request.File;
         var category = await _service.UploadIconAsync(id, icon);
         return Ok(category);
     }

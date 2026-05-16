@@ -73,6 +73,27 @@ public class ProductController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("me")]
+    [ProducesResponseType(typeof(SellerDashboardResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetMyListings([FromQuery] MyListingsParams filterParams)
+    {
+        var userId = User.GetBusinessId();
+        var result = await _productService.GetMyListingsAsync(userId, filterParams);
+        return Ok(result);
+    }
+
+    [HttpGet("{userId:guid}/products")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(PagedResult<ProductResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetProductsByUser(Guid userId, [FromQuery] PaginationParams pagination)
+    {
+        var result = await _productService.GetPublicProductsByUserAsync(userId, pagination);
+
+        return Ok(result);
+    }
+
     [HttpPatch("regular/{id:guid}")]
     public async Task<IActionResult> UpdateRegular(
     Guid id,
