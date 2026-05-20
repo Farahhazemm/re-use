@@ -15,6 +15,7 @@ public interface IUnitOfWork : IDisposable
     IProductRepository Product { get; }
 
     ICategoryFollowRepository CategoryFollow { get; }
+    IFavoriteRepository Favorites { get; }
 
     INotificationRepository Notifications { get; }
 

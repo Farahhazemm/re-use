@@ -22,6 +22,7 @@ public class UnitOfWork : IUnitOfWork
         CategoryFollow = new CategoryFollowRepository(_context);
         Product = new ProductRepository(_context);
         Notifications = new NotificationRepository(_context);
+        Favorites = new FavoriteRepository(_context);
     }
     public IUserRepository User { get; private set; }
 
@@ -34,6 +35,8 @@ public class UnitOfWork : IUnitOfWork
     public ICategoryFollowRepository CategoryFollow { get; private set; }
 
     public INotificationRepository Notifications { get; private set; }
+
+    public IFavoriteRepository Favorites { get; private set; }
 
     public async Task CommitTransactionAsync()
     {

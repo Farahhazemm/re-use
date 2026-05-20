@@ -28,4 +28,6 @@ public abstract class Product : BaseEntity
     // TODO: IsShippable, ShippingCost, IsPremium, PremiumExpiresAt, ViewCount, PublishedAt
 
     public List<ProductImage> ProductImages { get; set; } = [];
+    public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
+
 }

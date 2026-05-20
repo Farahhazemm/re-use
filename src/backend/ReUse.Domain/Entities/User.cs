@@ -41,5 +41,7 @@ public class User : BaseEntity
     public ICollection<Follow> Followers { get; set; } = new List<Follow>();
     public ICollection<Follow> Following { get; set; } = new List<Follow>();
     public ICollection<CategoryFollow> CategoryFollows { get; set; } = new List<CategoryFollow>();
+    public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
+
 
 }

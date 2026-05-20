@@ -70,6 +70,7 @@ public static class DependencyInjection
         services.AddScoped<ICategoryFollowRepository,
         CategoryFollowRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<IFavoriteRepository, FavoriteRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         #endregion
 
