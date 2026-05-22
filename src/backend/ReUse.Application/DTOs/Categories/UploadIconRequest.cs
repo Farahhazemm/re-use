@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace ReUse.Application.DTOs.Categories;
 
-public class UploadIconRequest
+public record UploadIconRequest
 {
-    public IFormFile File { get; set; }
+    public IFormFile File { get; init; } = null!;
 }

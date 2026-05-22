@@ -11,10 +11,6 @@ using ReUse.Application.Enums;
 using ReUse.Application.Interfaces;
 using ReUse.Application.Interfaces.Services;
 using ReUse.Application.Interfaces.Services.External;
-//using ReUse.Application.Utilities.Enums;
-using ReUse.Domain.Entities;
-
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace ReUse.Application.Services;
 
