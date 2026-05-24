@@ -29,5 +29,6 @@ public abstract class Product : BaseEntity
 
     public List<ProductImage> ProductImages { get; set; } = [];
     public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
+    public ICollection<ProductComment> Comments { get; set; } = new List<ProductComment>();
 
 }

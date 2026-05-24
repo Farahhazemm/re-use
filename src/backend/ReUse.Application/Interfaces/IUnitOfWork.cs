@@ -19,6 +19,8 @@ public interface IUnitOfWork : IDisposable
 
     INotificationRepository Notifications { get; }
 
+    ICommentRepository Comments { get; }
+
     Task<int> SaveChangesAsync();
     void Dispose();
 }

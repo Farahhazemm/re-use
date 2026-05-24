@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationPublisher, NotificationPublisher>();
         services.AddScoped<INotificationFactory, NotificationFactory>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<ICommentService, CommentService>();
         #endregion
 
 

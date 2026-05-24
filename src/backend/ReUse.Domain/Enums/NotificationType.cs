@@ -8,5 +8,6 @@ public enum NotificationType
     WantedMatch,
     SwapMatch,
     AdminBroadcast,
-    OrderUpdate
+    OrderUpdate,
+    CommentReply
 }
