@@ -63,7 +63,8 @@ public static class UserSeeder
                 {
                     UserName = seed.UserName,
                     Email = seed.Email,
-                    EmailConfirmed = true
+                    EmailConfirmed = true,
+                    LockoutEnabled = true
                 };
 
                 var result = await userManager.CreateAsync(identityUser, DefaultPassword);

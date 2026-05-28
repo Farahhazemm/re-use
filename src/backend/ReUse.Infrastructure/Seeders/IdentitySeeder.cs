@@ -40,7 +40,8 @@ public static class IdentitySeeder
             {
                 UserName = adminUserName,
                 Email = adminEmail,
-                EmailConfirmed = true
+                EmailConfirmed = true,
+                LockoutEnabled = true
             };
 
             var result = await userManager.CreateAsync(user, adminPassword);

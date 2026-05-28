@@ -3,6 +3,8 @@ using System.Security.Claims;
 
 using AutoMapper;
 
+using Microsoft.AspNetCore.Identity;
+
 using Reuse.Infrastructure.Identity.Models;
 
 using ReUse.Application.DTOs.Auth;
@@ -20,15 +22,19 @@ public class JwtAuthService : IAuthService
 {
     private readonly IUnitOfWork _uow;
     private readonly IIdentityUserRepository _identityUserRepo;
+    private readonly UserManager<ApplicationUser> _userManager;
     private readonly ITokenService _tokenService;
     private readonly IAccountService _accountService;
+    private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IMapper _mapper;
     public JwtAuthService(
         IUnitOfWork uow,
         ITokenService tokenService,
         IIdentityUserRepository identityUserRepo,
         IMapper mapper,
-        IAccountService accountService
+        IAccountService accountService,
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager
         )
     {
         _uow = uow;
@@ -36,15 +42,38 @@ public class JwtAuthService : IAuthService
         _identityUserRepo = identityUserRepo;
         _accountService = accountService;
         _mapper = mapper;
+        _userManager = userManager;
+        _signInManager = signInManager;
     }
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
     {
         var user = await _identityUserRepo.GetByEmail(request.Email);
 
-        if (user == null || !await _identityUserRepo.CheckPasswordAsync(user, request.Password))
+        if (user == null)
         {
             throw new InvalidCredentialsException();
         }
+
+        if (await _userManager.IsLockedOutAsync(user))
+        {
+            var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
+
+            // Admin block
+            if (lockoutEnd == DateTimeOffset.MaxValue)
+                throw new UserBlockedException();
+
+            // Failed login attempts lockout
+            throw new UserLockedOutException();
+        }
+
+        // Password validation with lockout support
+        var signInResult = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
+
+        if (signInResult.IsLockedOut)
+            throw new UserLockedOutException();
+
+        if (!signInResult.Succeeded)
+            throw new InvalidCredentialsException();
 
         if (!user.EmailConfirmed)
         {
@@ -56,6 +85,8 @@ public class JwtAuthService : IAuthService
 
         //  Auto-reactivate if account is deactivated
         //    This is the ONLY place reactivation happens no separate endpoint needed.
+
+
         await _accountService.EnsureActiveOnLoginAsync(domainUser.Id);
 
         var jwtToken = await _tokenService.GenerateJwtAsync(user);

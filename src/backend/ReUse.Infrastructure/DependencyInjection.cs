@@ -27,6 +27,7 @@ using ReUse.Infrastructure.Services.Caching;
 using ReUse.Infrastructure.Services.Communication;
 using ReUse.Infrastructure.Services.Identity;
 using ReUse.Infrastructure.Services.Storage;
+using ReUse.Infrastructure.Services.User_Management;
 
 namespace ReUse.Infrastructure;
 
@@ -89,6 +90,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthorizationHandler,
         ActiveUserHandler>();
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
+        services.AddScoped<IAdminUserService, AdminUserService>();
 
         #endregion
 

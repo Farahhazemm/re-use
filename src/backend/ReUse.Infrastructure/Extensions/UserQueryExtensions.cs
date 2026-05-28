@@ -12,7 +12,6 @@ public static class UserQueryExtensions
     {
         var isDescending = sortOrder == SortDirection.Desc;
 
-        // Map sorting field names
         query = sortBy switch
         {
             UserSortBy.FullName => isDescending
@@ -27,7 +26,6 @@ public static class UserQueryExtensions
                 ? query.OrderByDescending(u => u.CreatedAt)
                 : query.OrderBy(u => u.CreatedAt),
 
-            // Default: sort by CreatedAt desc
             _ => query.OrderByDescending(u => u.CreatedAt)
         };
 
@@ -41,11 +39,11 @@ public static class UserQueryExtensions
         if (string.IsNullOrWhiteSpace(searchTerm))
             return query;
 
-        var lowerSearchTerm = searchTerm.Trim().ToLower();
+        var term = searchTerm.Trim().ToLower();
 
         return query.Where(u =>
-            u.FullName.ToLower().Contains(lowerSearchTerm) ||
-            u.Email.ToLower().Contains(lowerSearchTerm)
+            u.FullName.ToLower().Contains(term) ||
+            u.Email.ToLower().Contains(term)
         );
     }
 
@@ -56,7 +54,8 @@ public static class UserQueryExtensions
         if (string.IsNullOrWhiteSpace(city))
             return query;
 
-        return query.Where(u => u.City == city);
+        var normalized = city.Trim().ToLower();
+        return query.Where(u => u.City != null && u.City.ToLower() == normalized);
     }
 
     public static IQueryable<User> FilterByCountry(
@@ -66,7 +65,8 @@ public static class UserQueryExtensions
         if (string.IsNullOrWhiteSpace(country))
             return query;
 
-        return query.Where(u => u.Country == country);
+        var normalized = country.Trim().ToLower();
+        return query.Where(u => u.Country != null && u.Country.ToLower() == normalized);
     }
 
     public static IQueryable<User> FilterByStateProvince(
@@ -76,7 +76,8 @@ public static class UserQueryExtensions
         if (string.IsNullOrWhiteSpace(stateProvince))
             return query;
 
-        return query.Where(u => u.StateProvince == stateProvince);
+        var normalized = stateProvince.Trim().ToLower();
+        return query.Where(u => u.StateProvince != null && u.StateProvince.ToLower() == normalized);
     }
 
     public static IQueryable<User> FilterByActive(
@@ -101,5 +102,12 @@ public static class UserQueryExtensions
             query = query.Where(u => u.CreatedAt <= createdBefore.Value);
 
         return query;
+    }
+
+    public static IQueryable<User> ExcludeUser(
+        this IQueryable<User> query,
+        Guid userId)
+    {
+        return query.Where(u => u.Id != userId);
     }
 }

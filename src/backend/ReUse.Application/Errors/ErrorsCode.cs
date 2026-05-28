@@ -17,4 +17,6 @@ public static class ErrorsCode
     public const string InvalidResetPasswordToken = "INVALID_RESET_PASSWORD_TOKEN";
     public const string InternalServer = "INTERNAL_SERVER";
     public const string BadRequest = "BAD_REQUEST";
+    public const string UserLockedOut = "USER_LOCKED_OUT";
+    public const string UserBlocked = "USER_BLOCKED";
 }

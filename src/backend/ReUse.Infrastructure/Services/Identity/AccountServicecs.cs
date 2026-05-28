@@ -103,6 +103,13 @@ public class AccountService : IAccountService
         if (user == null)
             throw new NotFoundException(nameof(User));
 
+        var identityUser = await _userManager.FindByIdAsync(user.IdentityUserId)
+       ?? throw new NotFoundException(nameof(ApplicationUser));
+
+        // If admin blocked the account, don't reactivate
+        if (await _userManager.IsLockedOutAsync(identityUser))
+            throw new UserBlockedException();
+
         if (user.IsActive)
             return;
 

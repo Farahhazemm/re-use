@@ -197,11 +197,17 @@ public static class DependencyInjection
                 "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
 
             options.SignIn.RequireConfirmedEmail = true;
-            options.SignIn.RequireConfirmedPhoneNumber = true;
+            //  options.SignIn.RequireConfirmedPhoneNumber = true;
+
+            // Lockout
+            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+            options.Lockout.MaxFailedAccessAttempts = 5;
+            options.Lockout.AllowedForNewUsers = true;
         })
         .AddRoles<IdentityRole>()
         .AddEntityFrameworkStores<AppIdentityDbContext>()
-        .AddDefaultTokenProviders();
+        .AddDefaultTokenProviders()
+        .AddSignInManager<SignInManager<ApplicationUser>>();
 
         return services;
     }
