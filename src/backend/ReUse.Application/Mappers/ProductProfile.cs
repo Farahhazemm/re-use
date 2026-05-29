@@ -70,7 +70,7 @@ public class ProductProfile : Profile
             .IncludeBase<BasicInfoUpdateRequest, Product>();
 
         CreateMap<UpdateRegularProductRequest, RegularProduct>()
-            .IncludeMembers(src => src.BasicInfo)
+            //.IncludeMembers(src => src.BasicInfo)
             .ForMember(dest => dest.Price, opt => opt.Condition(src => src.Price.HasValue))
             .ForMember(dest => dest.AllowNegotiation, opt => opt.Condition(src => src.AllowNegotiation.HasValue));
         #endregion
@@ -80,7 +80,7 @@ public class ProductProfile : Profile
             .IncludeBase<BasicInfoUpdateRequest, Product>();
 
         CreateMap<UpdateSwapProductRequest, SwapProduct>()
-            .IncludeMembers(src => src.BasicInfo)
+            //  .IncludeMembers(src => src.BasicInfo)
             .ForMember(dest => dest.WantedItemTitle, opt => opt.Condition(src => src.WantedItemTitle != null))
             .ForMember(dest => dest.WantedItemDescription, opt => opt.Condition(src => src.WantedItemDescription != null));
         #endregion
@@ -90,7 +90,7 @@ public class ProductProfile : Profile
             .IncludeBase<BasicInfoUpdateRequest, Product>();
 
         CreateMap<UpdateWantedProductRequest, WantedProduct>()
-            .IncludeMembers(src => src.BasicInfo)
+            //   .IncludeMembers(src => src.BasicInfo)
             .ForMember(dest => dest.DesiredPriceMin, opt => opt.Condition(src => src.DesiredPriceMin.HasValue))
             .ForMember(dest => dest.DesiredPriceMax, opt => opt.Condition(src => src.DesiredPriceMax.HasValue));
         #endregion
@@ -164,7 +164,7 @@ public class ProductProfile : Profile
                        .OrderBy(i => i.DisplayOrder)
                        .Select(i => i.Url)
                        .FirstOrDefault() ?? string.Empty))
-            // Type-specific fields — ignore في الـ base
+            // Type-specific fields 
             .ForMember(dest => dest.Price, opt => opt.Ignore())
             .ForMember(dest => dest.AllowNegotiation, opt => opt.Ignore())
             .ForMember(dest => dest.WantedItem, opt => opt.Ignore())

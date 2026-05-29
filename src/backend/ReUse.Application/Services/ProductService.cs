@@ -180,7 +180,12 @@ public class ProductService : IProductService
 
         var regular = (RegularProduct)product;
 
-        _mapper.Map(request, regular);
+        if (request.BasicInfo is not null)
+        {
+            _mapper.Map(request.BasicInfo, product);
+        }
+
+        _mapper.Map(request, product);
 
         // Post-update validation
         if (regular.Price <= 0)
@@ -207,6 +212,11 @@ public class ProductService : IProductService
         EnsureNotDeleted(product);
 
         var swap = (SwapProduct)product;
+
+        if (request.BasicInfo is not null)
+        {
+            _mapper.Map(request.BasicInfo, product);
+        }
 
         _mapper.Map(request, swap);
 
@@ -235,6 +245,11 @@ public class ProductService : IProductService
         EnsureNotDeleted(product);
 
         var wanted = (WantedProduct)product;
+
+        if (request.BasicInfo is not null)
+        {
+            _mapper.Map(request.BasicInfo, product);
+        }
 
         _mapper.Map(request, wanted);
 
