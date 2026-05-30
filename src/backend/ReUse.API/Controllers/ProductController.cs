@@ -7,6 +7,7 @@ using ReUse.Application.DTOs.Products;
 using ReUse.Application.DTOs.Products.Requests;
 using ReUse.Application.DTOs.Products.Responses;
 using ReUse.Application.Interfaces.Services;
+
 namespace ReUse.API.Controllers;
 
 [Route("api/[controller]")]
@@ -15,10 +16,16 @@ public class ProductController : ControllerBase
 {
     private readonly IProductImageService _productImageService;
     private readonly IProductService _productService;
-    public ProductController(IProductImageService productImageService, IProductService productService)
+    private readonly IRecommendationService _recommendationService;
+
+    public ProductController(
+        IProductImageService productImageService,
+        IProductService productService,
+        IRecommendationService recommendationService)
     {
         _productImageService = productImageService;
         _productService = productService;
+        _recommendationService = recommendationService;
     }
 
     [HttpPost("regular")]
@@ -65,11 +72,29 @@ public class ProductController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("{productId}/similar")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(IReadOnlyList<ProductResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetSimilar(Guid productId, [FromQuery] int count = 8)
+    {
+        var userId = User.Identity?.IsAuthenticated == true
+            ? User.GetBusinessId()
+            : (Guid?)null;
+
+        var result = await _recommendationService.GetSimilarProductsAsync(productId, userId, count);
+        return Ok(result);
+    }
+
     [HttpGet("")]
     [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] ProductFilterParams filterParams)
     {
-        var result = await _productService.GetAllProductsAsync(filterParams);
+        var userId = User.Identity?.IsAuthenticated == true
+            ? User.GetBusinessId()
+            : (Guid?)null;
+
+        var result = await _productService.GetAllProductsAsync(filterParams, userId);
         return Ok(result);
     }
 

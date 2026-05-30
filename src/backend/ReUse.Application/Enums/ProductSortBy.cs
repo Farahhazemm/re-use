@@ -9,5 +9,6 @@ namespace ReUse.Application.Enums;
 public enum ProductSortBy
 {
     Newest,
-    Price
+    Price,
+    Recommended
 }

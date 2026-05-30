@@ -26,7 +26,7 @@ public interface IProductService
 
     Task<ProductDetailsResponse> GetByIdAsync(Guid productId);
 
-    Task<PagedResult<ProductResponse>> GetAllProductsAsync(ProductFilterParams filterParams);
+    Task<PagedResult<ProductResponse>> GetAllProductsAsync(ProductFilterParams filterParams, Guid? userId = null);
 
     Task<SellerDashboardResponse> GetMyListingsAsync(Guid userId, MyListingsParams filterParams);
 

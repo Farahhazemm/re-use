@@ -144,6 +144,10 @@ public static class ProductQueryExtensions
             (ProductSortBy.Newest, SortDirection.Asc) =>
                 query.OrderBy(p => p.CreatedAt),
 
+
+            (ProductSortBy.Recommended, _) =>
+                query.OrderByDescending(p => p.CreatedAt),
+
             _ => // Newest Desc (default)
                 query.OrderByDescending(p => p.CreatedAt)
         };

@@ -6,6 +6,7 @@ using ReUse.Application.DTOs;
 using ReUse.Application.DTOs.Products;
 using ReUse.Application.DTOs.Products.Requests;
 using ReUse.Application.DTOs.Products.Responses;
+using ReUse.Application.Enums;
 using ReUse.Application.Exceptions;
 using ReUse.Application.Interfaces;
 using ReUse.Application.Interfaces.Services;
@@ -19,12 +20,18 @@ public class ProductService : IProductService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IProductImageService _productImageService;
     private readonly IMapper _mapper;
+    private readonly IRecommendationService _recommendationService;
 
-    public ProductService(IUnitOfWork unitOfWork, IProductImageService productImageService, IMapper mapper)
+    public ProductService(
+        IUnitOfWork unitOfWork,
+        IProductImageService productImageService,
+        IMapper mapper,
+        IRecommendationService recommendationService)
     {
         _unitOfWork = unitOfWork;
         _productImageService = productImageService;
         _mapper = mapper;
+        _recommendationService = recommendationService;
     }
 
     #region Create
@@ -109,8 +116,13 @@ public class ProductService : IProductService
     #endregion
 
     #region GetAll
-    public async Task<PagedResult<ProductResponse>> GetAllProductsAsync(ProductFilterParams filterParams)
+    public async Task<PagedResult<ProductResponse>> GetAllProductsAsync(ProductFilterParams filterParams, Guid? userId = null)
     {
+        // When the caller requests recommendation ordering, delegate entirely to
+        // RecommendationService which runs the two-stage scoring pipeline.
+        if (filterParams.SortBy == ProductSortBy.Recommended)
+            return await _recommendationService.GetPersonalisedFeedAsync(userId, filterParams.Pagination);
+
         var pagedProducts = await _unitOfWork.Product.GetAllAsync(filterParams);
 
         return new PagedResult<ProductResponse>
