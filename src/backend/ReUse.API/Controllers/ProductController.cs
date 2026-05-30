@@ -20,6 +20,7 @@ public class ProductController : ControllerBase
     private readonly IProductImageService _productImageService;
     private readonly IProductService _productService;
     private readonly IRecommendationService _recommendationService;
+    private readonly IPromotionService _promotionService;
 
     public ProductController(
         IProductImageService productImageService,
@@ -29,7 +30,7 @@ public class ProductController : ControllerBase
         _productImageService = productImageService;
         _productService = productService;
         _recommendationService = recommendationService;
-    private readonly IPromotionService _promotionService;
+    }
     public ProductController(IProductImageService productImageService, IProductService productService, IPromotionService promotionService)
     {
         _productImageService = productImageService;
