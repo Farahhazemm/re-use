@@ -22,6 +22,7 @@ using ReUse.Infrastructure.Notifications;
 using ReUse.Infrastructure.Persistence;
 using ReUse.Infrastructure.Repositories;
 using ReUse.Infrastructure.Security.Authorization;
+using ReUse.Infrastructure.Services;
 using ReUse.Infrastructure.Services.Auth;
 using ReUse.Infrastructure.Services.Caching;
 using ReUse.Infrastructure.Services.Communication;
@@ -92,7 +93,7 @@ public static class DependencyInjection
         ActiveUserHandler>();
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
         services.AddScoped<IAdminUserService, AdminUserService>();
-
+        services.AddHttpClient<IPaymentService, PaymobService>();
         #endregion
 
         #region ImageServic

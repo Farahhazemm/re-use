@@ -356,15 +356,45 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("TransactionId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
-                    b.ToTable("Payment");
+                    b.HasIndex("TransactionId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("payments", (string)null);
                 });
 
             modelBuilder.Entity("ReUse.Domain.Entities.Product", b =>
@@ -386,6 +416,11 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsPremium")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("LocationCity")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -396,6 +431,9 @@ namespace ReUse.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("OwnerUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("PremiumExpiresAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ProductType")
                         .IsRequired()
@@ -822,6 +860,17 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                     b.Navigation("Seller");
                 });
 
+            modelBuilder.Entity("ReUse.Domain.Entities.Payment", b =>
+                {
+                    b.HasOne("ReUse.Domain.Entities.User", "User")
+                        .WithMany("Payments")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ReUse.Domain.Entities.Product", b =>
                 {
                     b.HasOne("ReUse.Domain.Entities.Category", "Category")
@@ -924,6 +973,8 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                     b.Navigation("Followers");
 
                     b.Navigation("Following");
+
+                    b.Navigation("Payments");
                 });
 #pragma warning restore 612, 618
         }
