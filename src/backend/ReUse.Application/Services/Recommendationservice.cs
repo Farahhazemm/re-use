@@ -73,6 +73,8 @@ public class RecommendationService : IRecommendationService
     #region Similar Products 
     public async Task<IReadOnlyList<ProductResponse>> GetSimilarProductsAsync(Guid productId, Guid? userId, int count = 8)
     {
+        if (count < 1 || count > 50)
+            throw new InvalidRequestException("Count must be between 1 and 50.");
 
         var categoryInfo = await _recommendationRepository.GetProductCategoryInfoAsync(productId);
 
@@ -90,12 +92,7 @@ public class RecommendationService : IRecommendationService
 
         var context = await _recommendationRepository.GetUserContextAsync(userId);
 
-        var topIds = candidates
-            .Select(c => new ScoredProduct { Candidate = c, Score = RankingEngine.Score(c, context) })
-            .OrderByDescending(s => s.Score)
-            .Take(count)
-            .Select(s => s.Candidate.Id)
-            .ToList();
+        var topIds = await _recommendationRepository.RankCandidatesAsync(candidates, context, count);
 
         var products = await _recommendationRepository.GetProductsByIdsAsync(topIds);
 

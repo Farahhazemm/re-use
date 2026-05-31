@@ -4,7 +4,6 @@ namespace ReUse.Application.Services;
 
 public static class RankingEngine
 {
-
     private const double WeightCategoryAffinity = 0.40;
     private const double WeightFreshness = 0.30;
     private const double WeightSellerAffinity = 0.20;
@@ -34,18 +33,18 @@ public static class RankingEngine
         return 0.00;
     }
 
-
+    // fix monotonic exponential decay no buckets no jumps
     public static double FreshnessScore(DateTime createdAt)
     {
         var daysOld = (DateTime.UtcNow - createdAt).TotalDays;
 
-        if (daysOld <= 1) return 1.00;
-        if (daysOld <= 3) return 0.80;
-        if (daysOld <= 7) return 0.60;
+        if (daysOld < 0)
+            daysOld = 0;
 
-        return Math.Max(0.0, 1.0 - daysOld / 60.0);
+        const double lambda = 0.08; // tuning parameter
+
+        return Math.Exp(-lambda * daysOld);
     }
-
 
     public static double SellerAffinityScore(CandidateProduct candidate, UserRecommendationContext context)
     {

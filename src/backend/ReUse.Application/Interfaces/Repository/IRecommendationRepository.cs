@@ -16,7 +16,7 @@ public interface IRecommendationRepository
 
     Task<IReadOnlyList<CandidateProduct>> GetCandidatesAsync(UserRecommendationContext context);
 
-
+    Task<List<Guid>> RankCandidatesAsync(IReadOnlyList<CandidateProduct> candidates, UserRecommendationContext context, int count);
     Task<IReadOnlyList<CandidateProduct>> GetSimilarCandidatesAsync(Guid productId, Guid categoryId, Guid? parentCategoryId, Guid? excludeUserId, int count = 20);
 
     Task<IReadOnlyList<Product>> GetProductsByIdsAsync(IEnumerable<Guid> orderedIds);

@@ -9,6 +9,7 @@ using ReUse.Application.DTOs.Products;
 using ReUse.Application.DTOs.Products.Requests;
 using ReUse.Application.DTOs.Products.Responses;
 using ReUse.Application.Interfaces.Services;
+using ReUse.Application.Services;
 using ReUse.Infrastructure.Models.Paymob;
 
 namespace ReUse.API.Controllers;
@@ -25,16 +26,11 @@ public class ProductController : ControllerBase
     public ProductController(
         IProductImageService productImageService,
         IProductService productService,
-        IRecommendationService recommendationService)
+        IRecommendationService recommendationService, IPromotionService promotionService)
     {
         _productImageService = productImageService;
         _productService = productService;
         _recommendationService = recommendationService;
-    }
-    public ProductController(IProductImageService productImageService, IProductService productService, IPromotionService promotionService)
-    {
-        _productImageService = productImageService;
-        _productService = productService;
         _promotionService = promotionService;
     }
 
