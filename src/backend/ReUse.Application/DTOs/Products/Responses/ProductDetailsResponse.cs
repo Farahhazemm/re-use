@@ -8,6 +8,7 @@ public record ProductDetailsResponse
     public string Type { get; init; } = string.Empty;
     public string? Condition { get; init; }
     public string Status { get; init; } = string.Empty;
+    public int ViewCount { get; init; }
     public string? LocationCity { get; init; }
     public string? LocationCountry { get; init; }
 

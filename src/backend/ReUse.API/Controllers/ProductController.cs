@@ -22,16 +22,20 @@ public class ProductController : ControllerBase
     private readonly IProductService _productService;
     private readonly IRecommendationService _recommendationService;
     private readonly IPromotionService _promotionService;
+    private readonly IViewTrackingService _viewTrackingService;
 
     public ProductController(
         IProductImageService productImageService,
         IProductService productService,
-        IRecommendationService recommendationService, IPromotionService promotionService)
+        IRecommendationService recommendationService,
+        IPromotionService promotionService,
+        IViewTrackingService viewTrackingService)
     {
         _productImageService = productImageService;
         _productService = productService;
         _recommendationService = recommendationService;
         _promotionService = promotionService;
+        _viewTrackingService = viewTrackingService;
     }
 
     [HttpPost("regular")]
@@ -42,7 +46,6 @@ public class ProductController : ControllerBase
         var sellerId = User.GetBusinessId();
         var result = await _productService.CreateRegularProductAsync(request, sellerId);
         return CreatedAtAction(nameof(GetById), new { productId = result.Id }, result);
-
     }
 
     [HttpPost("swap")]
@@ -51,9 +54,7 @@ public class ProductController : ControllerBase
     public async Task<IActionResult> CreateSwapProduct([FromForm] CreateSwapProductRequest request)
     {
         var sellerId = User.GetBusinessId();
-
         var result = await _productService.CreateSwapProductAsync(request, sellerId);
-
         return CreatedAtAction(nameof(GetById), new { productId = result.Id }, result);
     }
 
@@ -63,9 +64,7 @@ public class ProductController : ControllerBase
     public async Task<IActionResult> CreateWantedProduct([FromForm] CreateWantedProductRequest request)
     {
         var sellerId = User.GetBusinessId();
-
         var result = await _productService.CreateWantedProductAsync(request, sellerId);
-
         return CreatedAtAction(nameof(GetById), new { productId = result.Id }, result);
     }
 
@@ -74,6 +73,12 @@ public class ProductController : ControllerBase
     public async Task<IActionResult> GetById(Guid productId)
     {
         var result = await _productService.GetByIdAsync(productId);
+
+        // Fire-and-forget: do not await — tracking must not block the response
+        var userId = User.Identity?.IsAuthenticated == true ? User.GetBusinessId() : (Guid?)null;
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        var ua = Request.Headers.UserAgent.ToString();
+        _ = _viewTrackingService.TrackViewAsync(productId, userId, ip, ua);
 
         return Ok(result);
     }
@@ -121,14 +126,11 @@ public class ProductController : ControllerBase
     public async Task<IActionResult> GetProductsByUser(Guid userId, [FromQuery] ProductFilterParams filter)
     {
         var result = await _productService.GetPublicProductsByUserAsync(userId, filter);
-
         return Ok(result);
     }
 
     [HttpPatch("regular/{id:guid}")]
-    public async Task<IActionResult> UpdateRegular(
-    Guid id,
-    [FromBody] UpdateRegularProductRequest request)
+    public async Task<IActionResult> UpdateRegular(Guid id, [FromBody] UpdateRegularProductRequest request)
     {
         var userId = User.GetBusinessId();
         await _productService.UpdateRegularProductAsync(id, request, userId);
@@ -136,9 +138,7 @@ public class ProductController : ControllerBase
     }
 
     [HttpPatch("swap/{id:guid}")]
-    public async Task<IActionResult> UpdateSwap(
-        Guid id,
-        [FromBody] UpdateSwapProductRequest request)
+    public async Task<IActionResult> UpdateSwap(Guid id, [FromBody] UpdateSwapProductRequest request)
     {
         var userId = User.GetBusinessId();
         await _productService.UpdateSwapProductAsync(id, request, userId);
@@ -146,37 +146,28 @@ public class ProductController : ControllerBase
     }
 
     [HttpPatch("wanted/{id:guid}")]
-    public async Task<IActionResult> UpdateWanted(
-        Guid id,
-        [FromBody] UpdateWantedProductRequest request)
+    public async Task<IActionResult> UpdateWanted(Guid id, [FromBody] UpdateWantedProductRequest request)
     {
         var userId = User.GetBusinessId();
         await _productService.UpdateWantedProductAsync(id, request, userId);
         return NoContent();
     }
 
-
     [HttpPost("{productId:guid}/images/offer")]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> UploadOfferImages(
-    Guid productId,
-    [FromForm] UploadMoreImagesRequest request)
+    public async Task<IActionResult> UploadOfferImages(Guid productId, [FromForm] UploadMoreImagesRequest request)
     {
         var userId = User.GetBusinessId();
-        var result = await _productImageService
-            .UploadOfferImagesAsync(productId, request, userId);
+        var result = await _productImageService.UploadOfferImagesAsync(productId, request, userId);
         return Ok(result);
     }
 
     [HttpPost("{productId:guid}/images/wanted")]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> UploadWantedImages(
-        Guid productId,
-        [FromForm] UploadMoreImagesRequest request)
+    public async Task<IActionResult> UploadWantedImages(Guid productId, [FromForm] UploadMoreImagesRequest request)
     {
         var userId = User.GetBusinessId();
-        var result = await _productImageService
-            .UploadWantedImagesAsync(productId, request, userId);
+        var result = await _productImageService.UploadWantedImagesAsync(productId, request, userId);
         return Ok(result);
     }
 
@@ -200,39 +191,23 @@ public class ProductController : ControllerBase
     public async Task<IActionResult> DeleteProduct(Guid productId)
     {
         var userId = User.GetBusinessId();
-
         await _productService.DeleteProductAsync(productId, userId);
-
         return NoContent();
     }
 
     [HttpGet("premium/price")]
-    public IActionResult GetPremiumPrice(
-        [FromQuery] PremiumRequest request)
+    public IActionResult GetPremiumPrice([FromQuery] PremiumRequest request)
     {
-        var amount =
-            _promotionService.CalculatePremiumAmount(
-                request.DurationDays);
-
-        return Ok(new
-        {
-            request.DurationDays,
-            amount,
-            currency = "EGP"
-        });
+        var amount = _promotionService.CalculatePremiumAmount(request.DurationDays);
+        return Ok(new { request.DurationDays, amount, currency = "EGP" });
     }
 
     [HttpPost("{productId:guid}/premium")]
     public async Task<IActionResult> MakePremium(Guid productId, PremiumRequest dto)
     {
         var userId = User.GetBusinessId();
-
         var payUrl = await _promotionService.CreateProductPremiumPayment(productId, userId, dto.DurationDays);
-
-        return Ok(new
-        {
-            paymentUrl = payUrl
-        });
+        return Ok(new { paymentUrl = payUrl });
     }
 
     [HttpPost("premium/callback")]
@@ -241,8 +216,6 @@ public class ProductController : ControllerBase
     {
         string receivedHmac = Request.Query["hmac"];
         await _promotionService.PayCallback(receivedHmac, payload);
-
         return Ok();
     }
-
 }

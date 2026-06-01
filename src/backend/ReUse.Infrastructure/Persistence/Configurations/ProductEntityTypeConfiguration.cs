@@ -46,6 +46,15 @@ public class ProductEntityTypeConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(p => p.PremiumExpiresAt);
 
+        // feed properties
+        builder.Property(p => p.ViewCount)
+            .IsRequired()
+            .HasDefaultValue(0);
+
+        builder.Property(p => p.RecentFavoriteCount)
+            .IsRequired()
+            .HasDefaultValue(0);
+
         // Location
         builder.Property(p => p.LocationCity)
             .HasMaxLength(100);
@@ -80,6 +89,22 @@ public class ProductEntityTypeConfiguration : IEntityTypeConfiguration<Product>
         builder.HasIndex(p => p.Title);
         builder.HasIndex(p => p.Status);
         builder.HasIndex(p => p.ProductType);
+
+        // Trending bucket: active products ordered by recent favourite count
+        builder.HasIndex(p => new { p.Status, p.RecentFavoriteCount })
+            .HasDatabaseName("ix_products_status_favcount");
+
+        // Fresh bucket: active products ordered by creation date
+        builder.HasIndex(p => new { p.Status, p.CreatedAt })
+            .HasDatabaseName("ix_products_status_created");
+
+        // Local bucket: active products by location
+        builder.HasIndex(p => new { p.Status, p.LocationCountry, p.LocationCity })
+            .HasDatabaseName("ix_products_status_location");
+
+        // Premium filter
+        builder.HasIndex(p => new { p.IsPremium, p.PremiumExpiresAt })
+            .HasDatabaseName("ix_products_premium");
     }
 
 }

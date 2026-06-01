@@ -29,6 +29,8 @@ public abstract class Product : BaseEntity
 
     public bool IsPremium { get; set; }
     public DateTime? PremiumExpiresAt { get; set; }
+    public int ViewCount { get; set; } = 0;
+    public int RecentFavoriteCount { get; set; } = 0;
     public List<ProductImage> ProductImages { get; set; } = [];
     public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
     public ICollection<ProductComment> Comments { get; set; } = new List<ProductComment>();

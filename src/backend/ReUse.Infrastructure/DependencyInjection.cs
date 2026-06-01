@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -15,6 +9,7 @@ using ReUse.Application.Interfaces.Services;
 using ReUse.Application.Interfaces.Services.External;
 using ReUse.Application.Options;
 using ReUse.Application.Services;
+using ReUse.Infrastructure.BackgroundJobs;
 using ReUse.Infrastructure.Identity;
 using ReUse.Infrastructure.Interfaces.Repositories;
 using ReUse.Infrastructure.Interfaces.Services;
@@ -34,10 +29,9 @@ namespace ReUse.Infrastructure;
 
 public static class DependencyInjection
 {
-
     #region DataBase
     public static IServiceCollection AddDatabase(this IServiceCollection services,
-    IConfiguration configuration)
+        IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("pgsql");
 
@@ -58,19 +52,14 @@ public static class DependencyInjection
         services.AddDatabase(configuration);
 
         #region UnitOfWork
-        services.AddScoped<IUnitOfWork,
-        UnitOfWork.UnitOfWork>();
+        services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
         #endregion
 
-        #region Repositorises
-        services.AddScoped<IFollowRepository,
-        FollowRepository>();
-        services.AddScoped<IProductImageRepository,
-        ProductImageRepository>();
-        services.AddScoped<ICategoryRepository,
-        CategoryRepository>();
-        services.AddScoped<ICategoryFollowRepository,
-        CategoryFollowRepository>();
+        #region Repositories
+        services.AddScoped<IFollowRepository, FollowRepository>();
+        services.AddScoped<IProductImageRepository, ProductImageRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<ICategoryFollowRepository, CategoryFollowRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IFavoriteRepository, FavoriteRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
@@ -85,27 +74,24 @@ public static class DependencyInjection
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IOtpService, OtpService>();
         services.AddScoped<IIdentityUserRepository, IdentityUserRepository>();
-        services.AddScoped<IAuthService,
-        JwtAuthService>();
-        services.AddScoped<IAccountService,
-        AccountService>();
-        services.AddScoped<IAuthorizationHandler,
-        ActiveUserHandler>();
+        services.AddScoped<IAuthService, JwtAuthService>();
+        services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<IAuthorizationHandler, ActiveUserHandler>();
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
         services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddHttpClient<IPaymentService, PaymobService>();
+
+        // View tracking (fire-and-forget, session-deduplicated)
+        services.AddScoped<IViewTrackingService, ViewTrackingService>();
         #endregion
 
-        #region ImageServic
-        services.AddScoped<IImageValidator,
-        ImageValidator>();
-        services.AddScoped<ICloudinaryService,
-        CloudinaryService>();
-        services.AddScoped<IProductImageService,
-        ProductImageService>();
+        #region ImageService
+        services.AddScoped<IImageValidator, ImageValidator>();
+        services.AddScoped<ICloudinaryService, CloudinaryService>();
+        services.AddScoped<IProductImageService, ProductImageService>();
 
         services.Configure<CloudinaryOptions>(
-        configuration.GetSection("CloudinarySettings"));
+            configuration.GetSection("CloudinarySettings"));
         #endregion
 
         #region Cache
@@ -116,9 +102,10 @@ public static class DependencyInjection
 
         services.AddSignalR();
 
-        services.AddScoped<
-            INotificationChannelHandler,
-            SignalRNotificationChannelHandler>();
+        services.AddScoped<INotificationChannelHandler, SignalRNotificationChannelHandler>();
+
+        // Background jobs
+        services.AddHostedService<RecentFavoriteCountRefreshJob>();
 
         return services;
     }

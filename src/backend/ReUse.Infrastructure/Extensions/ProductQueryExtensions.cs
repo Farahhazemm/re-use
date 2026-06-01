@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using ReUse.Application.Enums;
+﻿using ReUse.Application.Enums;
 using ReUse.Domain.Entities;
 using ReUse.Domain.Enums;
 
@@ -12,9 +6,9 @@ namespace ReUse.Infrastructure.Extensions;
 
 public static class ProductQueryExtensions
 {
-    // Search 
+    // Search
 
-    ///Case-insensitive search across Title
+    /// Case-insensitive search across Title
     public static IQueryable<Product> Search(
         this IQueryable<Product> query,
         string? searchTerm)
@@ -23,11 +17,10 @@ public static class ProductQueryExtensions
             return query;
 
         var term = searchTerm.Trim().ToLower();
-
         return query.Where(p => p.Title.ToLower().Contains(term));
     }
 
-    //  Filters 
+    // Filters
 
     /// Multi-select type filter. No-ops when list is null or empty.
     public static IQueryable<Product> FilterByTypes(
@@ -40,7 +33,7 @@ public static class ProductQueryExtensions
         return query.Where(p => types.Contains(p.ProductType));
     }
 
-    ///Multi-select condition filter
+    /// Multi-select condition filter
     public static IQueryable<Product> FilterByConditions(
         this IQueryable<Product> query,
         List<ProductCondition>? conditions)
@@ -53,24 +46,19 @@ public static class ProductQueryExtensions
 
     /// Matches products whose Category OR Subcategory equals the given id
     public static IQueryable<Product> FilterByCategories(
-    this IQueryable<Product> query,
-    List<Guid>? categoryIds)
+        this IQueryable<Product> query,
+        List<Guid>? categoryIds)
     {
         if (categoryIds is null || categoryIds.Count == 0)
             return query;
 
         return query.Where(p =>
-            categoryIds.Contains(p.CategoryId) ||                // subcategory
-            (p.Category.ParentId.HasValue && categoryIds.Contains(p.Category.ParentId.Value)) // parent
+            categoryIds.Contains(p.CategoryId) ||
+            (p.Category.ParentId.HasValue && categoryIds.Contains(p.Category.ParentId.Value))
         );
     }
 
-
     /// Price range filter.
-    /// For Regular products: filters on Price.
-    /// For Wanted products:  filters on MinPrice / MaxPrice range overlap.
-    /// Swap products are excluded from price filtering when a range is set.
-
     public static IQueryable<Product> FilterByPrice(
         this IQueryable<Product> query,
         decimal? minPrice,
@@ -89,10 +77,10 @@ public static class ProductQueryExtensions
                 (!maxPrice.HasValue || ((WantedProduct)p).DesiredPriceMin <= maxPrice.Value)));
     }
 
-    /// <summary>Filters by LocationCity (case-insensitive exact match).</summary>
+    /// Filters by LocationCity (case-insensitive exact match).
     public static IQueryable<Product> FilterByLocation(
-    this IQueryable<Product> query,
-    string? location)
+        this IQueryable<Product> query,
+        string? location)
     {
         if (string.IsNullOrWhiteSpace(location))
             return query;
@@ -105,23 +93,12 @@ public static class ProductQueryExtensions
         );
     }
 
-    ///// TODO : Filters out products whose seller rating is below the minimum
-    //public static IQueryable<Product> FilterBySellerRating(
-    //    this IQueryable<Product> query,
-    //    double? minSellerRating)
-    //{
-    //    if (!minSellerRating.HasValue)
-    //        return query;
-
-    //    return query.Where(p => p.Seller.Rating >= minSellerRating.Value);
-    //}
-
-    //Sort
+    // Sort
 
     public static IQueryable<Product> ApplySort(
-     this IQueryable<Product> query,
-     ProductSortBy sortBy,
-     SortDirection direction)
+        this IQueryable<Product> query,
+        ProductSortBy sortBy,
+        SortDirection direction)
     {
         return (sortBy, direction) switch
         {
@@ -144,9 +121,8 @@ public static class ProductQueryExtensions
             (ProductSortBy.Newest, SortDirection.Asc) =>
                 query.OrderBy(p => p.CreatedAt),
 
-
             (ProductSortBy.Recommended, _) =>
-                query.OrderByDescending(p => p.CreatedAt),
+                query,  // No SQL ordering — RankingEngine applies in-memory sort after candidate scoring
 
             _ => // Newest Desc (default)
                 query.OrderByDescending(p => p.CreatedAt)
@@ -154,8 +130,8 @@ public static class ProductQueryExtensions
     }
 
     public static IQueryable<Product> FilterByStatus(
-    this IQueryable<Product> query,
-    ProductStatus? status)
+        this IQueryable<Product> query,
+        ProductStatus? status)
     {
         if (!status.HasValue)
             return query;
@@ -163,7 +139,7 @@ public static class ProductQueryExtensions
         return query.Where(p => p.Status == status.Value);
     }
 
-    /// <summary>Filters by owner user id. No-ops when ownerId is null.</summary>
+    /// Filters by owner user id. No-ops when ownerId is null.
     public static IQueryable<Product> FilterByOwner(
         this IQueryable<Product> query,
         Guid? ownerId)
@@ -174,7 +150,7 @@ public static class ProductQueryExtensions
         return query.Where(p => p.OwnerUserId == ownerId.Value);
     }
 
-    /// <summary>Multi-select status filter. No-ops when list is null or empty.</summary>
+    /// Multi-select status filter. No-ops when list is null or empty.
     public static IQueryable<Product> FilterByStatuses(
         this IQueryable<Product> query,
         List<ProductStatus>? statuses)
@@ -185,7 +161,7 @@ public static class ProductQueryExtensions
         return query.Where(p => statuses.Contains(p.Status));
     }
 
-    /// <summary>Filters by CreatedAt date range (inclusive). No-ops when both bounds are null.</summary>
+    /// Filters by CreatedAt date range (inclusive). No-ops when both bounds are null.
     public static IQueryable<Product> FilterByDateRange(
         this IQueryable<Product> query,
         DateTime? from,

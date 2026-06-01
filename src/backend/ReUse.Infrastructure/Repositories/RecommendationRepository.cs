@@ -3,7 +3,6 @@
 using ReUse.Application.DTOs.Recommendations;
 using ReUse.Application.Enums;
 using ReUse.Application.Interfaces.Repository;
-using ReUse.Application.Services;
 using ReUse.Domain.Entities;
 using ReUse.Domain.Enums;
 using ReUse.Infrastructure.Persistence;
@@ -20,7 +19,6 @@ public class RecommendationRepository : IRecommendationRepository
     private const int FreshBucketLimit = 80;
     private const int TrendingBucketLimit = 60;
     private const int PopularAllTimeLimit = 100;
-
     private const int FreshDaysThreshold = 7;
     private const int TrendingDaysThreshold = 14;
 
@@ -28,7 +26,6 @@ public class RecommendationRepository : IRecommendationRepository
     {
         _context = context;
     }
-
 
     #region UserContext
     public async Task<UserRecommendationContext> GetUserContextAsync(Guid? userId)
@@ -73,98 +70,93 @@ public class RecommendationRepository : IRecommendationRepository
             UserCountry = user?.Country
         };
     }
-
     #endregion
 
-    #region GetCandidate
+    #region GetCandidates
     public async Task<IReadOnlyList<CandidateProduct>> GetCandidatesAsync(UserRecommendationContext context)
     {
         var cutoffFresh = DateTime.UtcNow.AddDays(-FreshDaysThreshold);
         var cutoffTrending = DateTime.UtcNow.AddDays(-TrendingDaysThreshold);
 
-        var result = new List<CandidateProduct>();
-        var seen = new HashSet<Guid>();
 
-        void Add(IEnumerable<CandidateProduct> items)
+        var results = new List<List<CandidateProduct>>();
+
+        if (!context.IsColdStart)
         {
-            foreach (var item in items)
+
+            var affinityCategories = context.FollowedCategoryIds
+                .Union(context.TopFavoritedCategoryIds)
+                .ToList();
+
+            results.Add(await _context.Products
+                .AsNoTracking()
+                .Where(p => p.Status == ProductStatus.Active
+                         && affinityCategories.Contains(p.CategoryId)
+                         && (context.UserId == null || p.OwnerUserId != context.UserId))
+                .OrderByDescending(p => p.CreatedAt)
+                .Take(AffinityBucketLimit)
+                .Select(p => new CandidateProduct
+                {
+                    Id = p.Id,
+                    CategoryId = p.CategoryId,
+                    ParentCategoryId = p.Category.ParentId,
+                    OwnerUserId = p.OwnerUserId,
+                    Title = p.Title,
+                    Condition = p.Condition,
+                    LocationCity = p.LocationCity,
+                    LocationCountry = p.LocationCountry,
+                    CreatedAt = p.CreatedAt,
+                    RecentFavoriteCount = p.RecentFavoriteCount,
+                    CommentCount = p.Comments.Count(c => !c.IsDeleted),
+                    ViewCount = p.ViewCount,
+                    IsPremium = p.IsPremium,
+                    PremiumExpiresAt = p.PremiumExpiresAt,
+                    Bucket = CandidateBucket.Affinity
+                })
+                .ToListAsync());
+
+            // Seller affinity bucket
+            var sellerSet = context.FollowingSellerIds.ToList();
+            if (sellerSet.Count > 0)
             {
-                if (seen.Add(item.Id))
-                    result.Add(item);
+                results.Add(await _context.Products
+                    .AsNoTracking()
+                    .Where(p => p.Status == ProductStatus.Active
+                             && sellerSet.Contains(p.OwnerUserId)
+                             && (context.UserId == null || p.OwnerUserId != context.UserId))
+                    .OrderByDescending(p => p.CreatedAt)
+                    .Take(SellerAffinityLimit)
+                    .Select(p => new CandidateProduct
+                    {
+                        Id = p.Id,
+                        CategoryId = p.CategoryId,
+                        ParentCategoryId = p.Category.ParentId,
+                        OwnerUserId = p.OwnerUserId,
+                        Title = p.Title,
+                        Condition = p.Condition,
+                        LocationCity = p.LocationCity,
+                        LocationCountry = p.LocationCountry,
+                        CreatedAt = p.CreatedAt,
+                        RecentFavoriteCount = p.RecentFavoriteCount,
+                        CommentCount = p.Comments.Count(c => !c.IsDeleted),
+                        ViewCount = p.ViewCount,
+                        IsPremium = p.IsPremium,
+                        PremiumExpiresAt = p.PremiumExpiresAt,
+                        Bucket = CandidateBucket.SellerAffinity
+                    })
+                    .ToListAsync());
             }
         }
 
-
-        //  Affinity Bucket
-
-        var affinityCategories = context.FollowedCategoryIds
-            .Union(context.TopFavoritedCategoryIds)
-            .ToList();
-
-        var affinity = await _context.Products
+        // Trending bucket 
+        var trendingLimit = context.IsColdStart ? TrendingBucketLimit * 2 : TrendingBucketLimit;
+        results.Add(await _context.Products
             .AsNoTracking()
-            .Where(p => p.Status == ProductStatus.Active)
-            .Where(p => affinityCategories.Contains(p.CategoryId))
-            .OrderByDescending(p => p.CreatedAt)
-            .Take(AffinityBucketLimit)
-            .Select(p => new CandidateProduct
-            {
-                Id = p.Id,
-                CategoryId = p.CategoryId,
-                ParentCategoryId = p.Category.ParentId,
-                OwnerUserId = p.OwnerUserId,
-                Title = p.Title,
-                Condition = p.Condition,
-                LocationCity = p.LocationCity,
-                LocationCountry = p.LocationCountry,
-                CreatedAt = p.CreatedAt,
-                FavoriteCount = p.Favorites.Count(),
-                CommentCount = p.Comments.Count(c => !c.IsDeleted),
-                Bucket = CandidateBucket.Affinity
-            })
-            .ToListAsync();
-
-        Add(affinity);
-
-
-        //  Seller Bucket
-
-        var sellerSet = context.FollowingSellerIds.ToList();
-
-        var seller = await _context.Products
-            .AsNoTracking()
-            .Where(p => p.Status == ProductStatus.Active)
-            .Where(p => sellerSet.Contains(p.OwnerUserId))
-            .OrderByDescending(p => p.CreatedAt)
-            .Take(SellerAffinityLimit)
-            .Select(p => new CandidateProduct
-            {
-                Id = p.Id,
-                CategoryId = p.CategoryId,
-                ParentCategoryId = p.Category.ParentId,
-                OwnerUserId = p.OwnerUserId,
-                Title = p.Title,
-                Condition = p.Condition,
-                LocationCity = p.LocationCity,
-                LocationCountry = p.LocationCountry,
-                CreatedAt = p.CreatedAt,
-                FavoriteCount = p.Favorites.Count(),
-                CommentCount = p.Comments.Count(c => !c.IsDeleted),
-                Bucket = CandidateBucket.SellerAffinity
-            })
-            .ToListAsync();
-
-        Add(seller);
-
-
-        // Trending Bucket
-
-        var trending = await _context.Products
-            .AsNoTracking()
-            .Where(p => p.Status == ProductStatus.Active)
-            .OrderByDescending(p => p.Favorites.Count(f => f.CreatedAt >= cutoffTrending))
+            .Where(p => p.Status == ProductStatus.Active
+                     && (context.UserId == null || p.OwnerUserId != context.UserId))
+            .OrderByDescending(p => p.RecentFavoriteCount)
             .ThenByDescending(p => p.CreatedAt)
-            .Take(TrendingBucketLimit)
+            .Take(trendingLimit)
             .Select(p => new CandidateProduct
             {
                 Id = p.Id,
@@ -176,28 +168,27 @@ public class RecommendationRepository : IRecommendationRepository
                 LocationCity = p.LocationCity,
                 LocationCountry = p.LocationCountry,
                 CreatedAt = p.CreatedAt,
-                FavoriteCount = p.Favorites.Count(),
+                RecentFavoriteCount = p.RecentFavoriteCount,
                 CommentCount = p.Comments.Count(c => !c.IsDeleted),
+                ViewCount = p.ViewCount,
+                IsPremium = p.IsPremium,
+                PremiumExpiresAt = p.PremiumExpiresAt,
                 Bucket = CandidateBucket.Trending
             })
-            .ToListAsync();
+            .ToListAsync());
 
-        Add(trending);
-
-
-        // Local Bucket
-
+        // Local bucket
         if (!string.IsNullOrEmpty(context.UserCity) || !string.IsNullOrEmpty(context.UserCountry))
         {
             var city = context.UserCity?.ToLower();
             var country = context.UserCountry?.ToLower();
 
-            var local = await _context.Products
+            results.Add(await _context.Products
                 .AsNoTracking()
-                .Where(p => p.Status == ProductStatus.Active)
-                .Where(p =>
-                    (city != null && p.LocationCity != null && p.LocationCity.ToLower() == city) ||
-                    (country != null && p.LocationCountry != null && p.LocationCountry.ToLower() == country))
+                .Where(p => p.Status == ProductStatus.Active
+                         && (context.UserId == null || p.OwnerUserId != context.UserId)
+                         && ((city != null && p.LocationCity != null && p.LocationCity.ToLower() == city)
+                          || (country != null && p.LocationCountry != null && p.LocationCountry.ToLower() == country)))
                 .OrderByDescending(p => p.CreatedAt)
                 .Take(LocalBucketLimit)
                 .Select(p => new CandidateProduct
@@ -211,24 +202,25 @@ public class RecommendationRepository : IRecommendationRepository
                     LocationCity = p.LocationCity,
                     LocationCountry = p.LocationCountry,
                     CreatedAt = p.CreatedAt,
-                    FavoriteCount = p.Favorites.Count(),
+                    RecentFavoriteCount = p.RecentFavoriteCount,
                     CommentCount = p.Comments.Count(c => !c.IsDeleted),
+                    ViewCount = p.ViewCount,
+                    IsPremium = p.IsPremium,
+                    PremiumExpiresAt = p.PremiumExpiresAt,
                     Bucket = CandidateBucket.Local
                 })
-                .ToListAsync();
-
-            Add(local);
+                .ToListAsync());
         }
 
-
-        //  Fresh Bucket
-
-        var fresh = await _context.Products
+        // Fresh bucket 
+        var freshLimit = context.IsColdStart ? FreshBucketLimit * 2 : FreshBucketLimit;
+        results.Add(await _context.Products
             .AsNoTracking()
-            .Where(p => p.Status == ProductStatus.Active)
-            .Where(p => p.CreatedAt >= cutoffFresh)
+            .Where(p => p.Status == ProductStatus.Active
+                     && p.CreatedAt >= cutoffFresh
+                     && (context.UserId == null || p.OwnerUserId != context.UserId))
             .OrderByDescending(p => p.CreatedAt)
-            .Take(FreshBucketLimit)
+            .Take(freshLimit)
             .Select(p => new CandidateProduct
             {
                 Id = p.Id,
@@ -240,22 +232,23 @@ public class RecommendationRepository : IRecommendationRepository
                 LocationCity = p.LocationCity,
                 LocationCountry = p.LocationCountry,
                 CreatedAt = p.CreatedAt,
-                FavoriteCount = p.Favorites.Count(),
+                RecentFavoriteCount = p.RecentFavoriteCount,
                 CommentCount = p.Comments.Count(c => !c.IsDeleted),
+                ViewCount = p.ViewCount,
+                IsPremium = p.IsPremium,
+                PremiumExpiresAt = p.PremiumExpiresAt,
                 Bucket = CandidateBucket.Fresh
             })
-            .ToListAsync();
+            .ToListAsync());
 
-        Add(fresh);
-
-
-        //  Popular Bucket
-
-        var popular = await _context.Products
+        // Popularalltime bucket
+        var popularLimit = context.IsColdStart ? PopularAllTimeLimit : PopularAllTimeLimit / 2;
+        results.Add(await _context.Products
             .AsNoTracking()
-            .Where(p => p.Status == ProductStatus.Active)
-            .OrderByDescending(p => p.Favorites.Count())
-            .Take(PopularAllTimeLimit)
+            .Where(p => p.Status == ProductStatus.Active
+                     && (context.UserId == null || p.OwnerUserId != context.UserId))
+            .OrderByDescending(p => p.RecentFavoriteCount)
+            .Take(popularLimit)
             .Select(p => new CandidateProduct
             {
                 Id = p.Id,
@@ -267,39 +260,40 @@ public class RecommendationRepository : IRecommendationRepository
                 LocationCity = p.LocationCity,
                 LocationCountry = p.LocationCountry,
                 CreatedAt = p.CreatedAt,
-                FavoriteCount = p.Favorites.Count(),
+                RecentFavoriteCount = p.RecentFavoriteCount,
                 CommentCount = p.Comments.Count(c => !c.IsDeleted),
+                ViewCount = p.ViewCount,
+                IsPremium = p.IsPremium,
+                PremiumExpiresAt = p.PremiumExpiresAt,
                 Bucket = CandidateBucket.PopularAllTime
             })
-            .ToListAsync();
+            .ToListAsync());
 
-        Add(popular);
+        //  firstseen order 
+        var seen = new HashSet<Guid>();
+        var merged = new List<CandidateProduct>();
 
-        return result;
-    }
-    #endregion
-
-    #region  RankCandidates
-    public Task<List<Guid>> RankCandidatesAsync(IReadOnlyList<CandidateProduct> candidates, UserRecommendationContext context, int count)
-    {
-        var topIds = candidates
-            .Select(c => new ScoredProduct
+        foreach (var bucket in results)
+        {
+            foreach (var item in bucket)
             {
-                Candidate = c,
-                Score = RankingEngine.Score(c, context)
-            })
-            .OrderByDescending(s => s.Score)
-            .Take(count)
-            .Select(s => s.Candidate.Id)
-            .ToList();
+                if (seen.Add(item.Id))
+                    merged.Add(item);
+            }
+        }
 
-        return Task.FromResult(topIds);
+        return merged;
     }
     #endregion
 
 
-    #region get similar
-    public async Task<IReadOnlyList<CandidateProduct>> GetSimilarCandidatesAsync(Guid productId, Guid categoryId, Guid? parentCategoryId, Guid? excludeUserId, int count = 20)
+    #region GetSimilarCandidates
+    public async Task<IReadOnlyList<CandidateProduct>> GetSimilarCandidatesAsync(
+        Guid productId,
+        Guid categoryId,
+        Guid? parentCategoryId,
+        Guid? excludeUserId,
+        int count = 20)
     {
         var query = _context.Products
             .AsNoTracking()
@@ -327,38 +321,18 @@ public class RecommendationRepository : IRecommendationRepository
                 LocationCity = p.LocationCity,
                 LocationCountry = p.LocationCountry,
                 CreatedAt = p.CreatedAt,
-                FavoriteCount = p.Favorites.Count(),
+                RecentFavoriteCount = p.RecentFavoriteCount,
                 CommentCount = p.Comments.Count(c => !c.IsDeleted),
+                ViewCount = p.ViewCount,
+                IsPremium = p.IsPremium,
+                PremiumExpiresAt = p.PremiumExpiresAt,
                 Bucket = CandidateBucket.Fresh
             })
             .ToListAsync();
     }
-
     #endregion
 
-    #region mapping
-    private CandidateProduct Map(dynamic p, CandidateBucket bucket)
-    {
-        return new CandidateProduct
-        {
-            Id = p.Id,
-            CategoryId = p.CategoryId,
-            ParentCategoryId = p.ParentCategoryId,
-            OwnerUserId = p.OwnerUserId,
-            Title = p.Title,
-            Condition = p.Condition,
-            LocationCity = p.LocationCity,
-            LocationCountry = p.LocationCountry,
-            CreatedAt = p.CreatedAt,
-            FavoriteCount = p.FavoriteCount,
-            CommentCount = p.CommentCount,
-            Bucket = bucket
-        };
-    }
-    #endregion
-
-
-    #region getproduct 
+    #region GetProductsByIds
     public async Task<IReadOnlyList<Product>> GetProductsByIdsAsync(IEnumerable<Guid> orderedIds)
     {
         var ids = orderedIds.ToList();
@@ -379,8 +353,8 @@ public class RecommendationRepository : IRecommendationRepository
     }
     #endregion
 
-    #region GetCategoryofproduct
-    public async Task<(Guid CategoryId, Guid? ParentCategoryId)?> GetProductCategoryInfoAsync(Guid productId)
+    #region GetProductCategoryInfo
+    public async Task<(Guid CategoryId, Guid? ParentCategoryId, ProductCondition? Condition, string Title)?> GetProductCategoryInfoAsync(Guid productId)
     {
         var row = await _context.Products
             .AsNoTracking()
@@ -388,16 +362,16 @@ public class RecommendationRepository : IRecommendationRepository
             .Select(p => new
             {
                 p.CategoryId,
-                ParentCategoryId = (Guid?)p.Category.ParentId
+                ParentCategoryId = (Guid?)p.Category.ParentId,
+                p.Condition,
+                p.Title
             })
             .FirstOrDefaultAsync();
 
         if (row is null)
             return null;
 
-        return (row.CategoryId, row.ParentCategoryId);
+        return (row.CategoryId, row.ParentCategoryId, row.Condition, row.Title);
     }
-
     #endregion
-
 }
