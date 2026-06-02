@@ -22,20 +22,22 @@ public class ProductController : ControllerBase
     private readonly IProductService _productService;
     private readonly IRecommendationService _recommendationService;
     private readonly IPromotionService _promotionService;
-    private readonly IViewTrackingService _viewTrackingService;
+    //private readonly IViewTrackingService _viewTrackingService;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public ProductController(
         IProductImageService productImageService,
         IProductService productService,
         IRecommendationService recommendationService,
         IPromotionService promotionService,
-        IViewTrackingService viewTrackingService)
+        IServiceScopeFactory scopeFactory)
     {
         _productImageService = productImageService;
         _productService = productService;
         _recommendationService = recommendationService;
         _promotionService = promotionService;
-        _viewTrackingService = viewTrackingService;
+        //_viewTrackingService = viewTrackingService;
+        _scopeFactory = scopeFactory;
     }
 
     [HttpPost("regular")]
@@ -74,11 +76,16 @@ public class ProductController : ControllerBase
     {
         var result = await _productService.GetByIdAsync(productId);
 
-        // Fire-and-forget: do not await — tracking must not block the response
         var userId = User.Identity?.IsAuthenticated == true ? User.GetBusinessId() : (Guid?)null;
         var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var ua = Request.Headers.UserAgent.ToString();
-        _ = _viewTrackingService.TrackViewAsync(productId, userId, ip, ua);
+
+        _ = Task.Run(async () =>
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var svc = scope.ServiceProvider.GetRequiredService<IViewTrackingService>();
+            await svc.TrackViewAsync(productId, userId, ip, ua);
+        });
 
         return Ok(result);
     }

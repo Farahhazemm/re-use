@@ -149,10 +149,12 @@ public class RecommendationRepository : IRecommendationRepository
         }
 
         // Trending bucket 
+        // Trending bucket
         var trendingLimit = context.IsColdStart ? TrendingBucketLimit * 2 : TrendingBucketLimit;
         results.Add(await _context.Products
             .AsNoTracking()
             .Where(p => p.Status == ProductStatus.Active
+                     && p.CreatedAt >= cutoffTrending
                      && (context.UserId == null || p.OwnerUserId != context.UserId))
             .OrderByDescending(p => p.RecentFavoriteCount)
             .ThenByDescending(p => p.CreatedAt)
