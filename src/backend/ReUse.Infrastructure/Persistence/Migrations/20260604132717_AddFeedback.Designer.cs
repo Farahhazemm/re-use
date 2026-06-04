@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ReUse.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using ReUse.Infrastructure.Persistence;
 namespace ReUse.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260604132717_AddFeedback")]
+    partial class AddFeedback
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -497,11 +500,6 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<int>("RecentFavoriteCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -517,11 +515,6 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("ViewCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
                     b.HasKey("Id");
 
                     b.HasIndex("CategoryId");
@@ -533,18 +526,6 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                     b.HasIndex("Status");
 
                     b.HasIndex("Title");
-
-                    b.HasIndex("IsPremium", "PremiumExpiresAt")
-                        .HasDatabaseName("ix_products_premium");
-
-                    b.HasIndex("Status", "CreatedAt")
-                        .HasDatabaseName("ix_products_status_created");
-
-                    b.HasIndex("Status", "RecentFavoriteCount")
-                        .HasDatabaseName("ix_products_status_favcount");
-
-                    b.HasIndex("Status", "LocationCountry", "LocationCity")
-                        .HasDatabaseName("ix_products_status_location");
 
                     b.ToTable("products", (string)null);
 
