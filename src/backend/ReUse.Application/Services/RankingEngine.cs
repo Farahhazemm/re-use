@@ -58,7 +58,8 @@ public static class RankingEngine
         if (daysOld <= 1) return 1.00;
         if (daysOld <= 3) return 0.80;
         if (daysOld <= 7) return 0.60;
-        return Math.Max(0, 1.0 - daysOld / 60.0);
+
+        return Math.Max(0, 0.60 - ((daysOld - 7) / 60.0));
     }
 
 
