@@ -22,103 +22,103 @@ import ProductManagementPageWrapper from "./pages/ProductManagementPageWrapper";
 import AccountSettingsPageWrapper from "./pages/AccountSettingsPageWrapper";
 
 export const router = createBrowserRouter([
-    // Public
-    {
-        path: "/",
-        Component: HomePage,
-    },
-    {
-        path: "/products",
-        Component: ProductsPageWrapper,
-    },
-    {
-        path: "/categories",
-        Component: CategoriesPageWrapper,
-    },
-    {
-        path: "/category/:categoryId",
-        Component: CategoryProductsPageWrapper,
-    },
-    {
-        path: "/unauthorized",
-        Component: UnauthorizedPage,
-    },
-    {
-        path: "/profile/:userId",
-        Component: PublicUserProfilePageWrapper,
-    },
-    // Only for NON-auth users
-    {
-        element: <GuestRoute />,
-        children: [
-            {
-                path: "/login",
-                Component: LoginPageWrapper,
-            },
-            {
-                path: "/signup",
-                Component: SignUpPageWrapper,
-            },
-            {
-                path: "/verification",
-                Component: VerificationPageWrapper,
-            },
-            {
-                path: "/forgot-password",
-                Component: ForgotPasswordPageWrapper,
-            },
-            {
-                path: "/reset-password/verify",
-                Component: ResetPasswordVerificationPageWrapper,
-            },
-            {
-                path: "/reset-password",
-                Component: ResetPasswordPageWrapper,
-            },
-        ],
-    },
-    // Protected (admin)
-    {
-        element: <ProtectedRoute allowedRoles={["Admin"]} />,
-        children: [
-            {
-                path: "/admin/categories",
-                Component: CategoryManagementPageWrapper,
-            },
-            {
-                path: "/admin/products",
-                Component: ProductManagementPageWrapper,
-            },
-        ],
-    },
-    // Protected
-    {
-        element: <ProtectedRoute />,
-        children: [
-            {
-                path: "/followers-following",
-                Component: FollowersFollowingPageWrapper,
-            },
-            {
-                path: "/favorites",
-                Component: FavoritesPageWrapper,
-            },
-            {
-                path: "/my-profile",
-                Component: MyProfilePageWrapper,
-            },
-            {
-                path: "/create-product",
-                Component: CreateProductPageWrapper,
-            },
-            {
-                path: "/account-settings",
-                Component: AccountSettingsPageWrapper,
-            },
-            {
-                path: "/admin/settings",
-                element: <Navigate to="/account-settings" replace />,
-            },
-        ],
-    },
+  // Public
+  {
+    path: "/",
+    Component: HomePage,
+  },
+  {
+    path: "/products",
+    Component: ProductsPageWrapper,
+  },
+  {
+    path: "/categories",
+    Component: CategoriesPageWrapper,
+  },
+  {
+    path: "/category/:categoryId",
+    Component: CategoryProductsPageWrapper,
+  },
+  {
+    path: "/unauthorized",
+    Component: UnauthorizedPage,
+  },
+  {
+    path: "/profile/:userId",
+    Component: PublicUserProfilePageWrapper,
+  },
+  // Only for NON-auth users
+  {
+    element: <GuestRoute />,
+    children: [
+      {
+        path: "/login",
+        Component: LoginPageWrapper,
+      },
+      {
+        path: "/signup",
+        Component: SignUpPageWrapper,
+      },
+      {
+        path: "/verification",
+        Component: VerificationPageWrapper,
+      },
+      {
+        path: "/forgot-password",
+        Component: ForgotPasswordPageWrapper,
+      },
+      {
+        path: "/reset-password/verify",
+        Component: ResetPasswordVerificationPageWrapper,
+      },
+      {
+        path: "/reset-password",
+        Component: ResetPasswordPageWrapper,
+      },
+    ],
+  },
+  // Protected (admin)
+  {
+    element: <ProtectedRoute allowedRoles={["Admin"]} />,
+    children: [
+      {
+        path: "/admin/categories",
+        Component: CategoryManagementPageWrapper,
+      },
+      {
+        path: "/admin/products",
+        Component: ProductManagementPageWrapper,
+      },
+    ],
+  },
+  // Protected
+  {
+    element: <ProtectedRoute />,
+    children: [
+      {
+        path: "/followers-following",
+        Component: FollowersFollowingPageWrapper,
+      },
+      {
+        path: "/favorites",
+        Component: FavoritesPageWrapper,
+      },
+      {
+        path: "/my-profile",
+        Component: MyProfilePageWrapper,
+      },
+      {
+        path: "/create-product",
+        Component: CreateProductPageWrapper,
+      },
+      {
+        path: "/account-settings",
+        Component: AccountSettingsPageWrapper,
+      },
+      {
+        path: "/admin/settings",
+        element: <Navigate to="/account-settings" replace />,
+      },
+    ],
+  },
 ]);
