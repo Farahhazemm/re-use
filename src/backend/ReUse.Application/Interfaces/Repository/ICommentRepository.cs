@@ -16,4 +16,6 @@ public interface ICommentRepository : IBaseRepository<ProductComment>
     Task<ProductComment?> GetCommentWithAuthorAsync(Guid commentId);
 
     Task<int> CountRecentCommentsByUserOnProductAsync(Guid userId, Guid productId, DateTime since);
+
+    Task DeleteByUserIdAsync(Guid userId);
 }

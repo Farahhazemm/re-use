@@ -44,7 +44,7 @@ public class ProductCommentEntityTypeConfiguration : IEntityTypeConfiguration<Pr
         builder.HasOne(c => c.ParentComment)
                .WithMany(c => c.Replies)
                .HasForeignKey(c => c.ParentCommentId)
-               .OnDelete(DeleteBehavior.NoAction);
+               .OnDelete(DeleteBehavior.Cascade);
 
         // Indexes
         builder.HasIndex(c => new { c.ProductId, c.CreatedAt })

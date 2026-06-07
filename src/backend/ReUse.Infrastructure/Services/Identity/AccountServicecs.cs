@@ -135,6 +135,7 @@ public class AccountService : IAccountService
             throw new ForbiddenException();
 
         await _unitOfWork.Follow.DeleteByUserIdAsync(userId);
+        await _unitOfWork.Comments.DeleteByUserIdAsync(userId);
         _unitOfWork.User.Remove(user);
 
         _tokenService.RevokeAllAsync(identityUser);

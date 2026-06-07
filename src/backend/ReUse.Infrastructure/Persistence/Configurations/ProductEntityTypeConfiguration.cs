@@ -12,11 +12,9 @@ public class ProductEntityTypeConfiguration : IEntityTypeConfiguration<Product>
     {
         builder.ToTable("products");
 
-        // PK
         builder.HasKey(p => p.Id);
         builder.Property(p => p.Id).ValueGeneratedNever();
 
-        // Core properties
         builder.Property(p => p.Title)
             .HasMaxLength(255)
             .IsRequired();
@@ -39,14 +37,12 @@ public class ProductEntityTypeConfiguration : IEntityTypeConfiguration<Product>
             .IsRequired()
             .HasDefaultValue(ProductStatus.Active);
 
-        // Premium
         builder.Property(p => p.IsPremium)
             .IsRequired()
             .HasDefaultValue(false);
 
         builder.Property(p => p.PremiumExpiresAt);
 
-        // feed properties
         builder.Property(p => p.ViewCount)
             .IsRequired()
             .HasDefaultValue(0);
@@ -55,56 +51,46 @@ public class ProductEntityTypeConfiguration : IEntityTypeConfiguration<Product>
             .IsRequired()
             .HasDefaultValue(0);
 
-        // Location
         builder.Property(p => p.LocationCity)
             .HasMaxLength(100);
+
         builder.Property(p => p.LocationCountry)
             .HasMaxLength(100);
 
-        //Discriminator 
         builder.HasDiscriminator(p => p.ProductType)
-    .HasValue<RegularProduct>(ProductType.Regular)
-    .HasValue<WantedProduct>(ProductType.Wanted)
-    .HasValue<SwapProduct>(ProductType.Swap);
+            .HasValue<RegularProduct>(ProductType.Regular)
+            .HasValue<WantedProduct>(ProductType.Wanted)
+            .HasValue<SwapProduct>(ProductType.Swap);
 
-        // Audit
         builder.Property(p => p.CreatedAt)
             .IsRequired();
-
-        // Relationships
 
         builder.HasOne(p => p.Owner)
             .WithMany()
             .HasForeignKey(p => p.OwnerUserId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(p => p.Category)
             .WithMany()
             .HasForeignKey(p => p.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Indexes
         builder.HasIndex(p => p.OwnerUserId);
         builder.HasIndex(p => p.CategoryId);
         builder.HasIndex(p => p.Title);
         builder.HasIndex(p => p.Status);
         builder.HasIndex(p => p.ProductType);
 
-        // Trending bucket: active products ordered by recent favourite count
         builder.HasIndex(p => new { p.Status, p.RecentFavoriteCount })
             .HasDatabaseName("ix_products_status_favcount");
 
-        // Fresh bucket: active products ordered by creation date
         builder.HasIndex(p => new { p.Status, p.CreatedAt })
             .HasDatabaseName("ix_products_status_created");
 
-        // Local bucket: active products by location
         builder.HasIndex(p => new { p.Status, p.LocationCountry, p.LocationCity })
             .HasDatabaseName("ix_products_status_location");
 
-        // Premium filter
         builder.HasIndex(p => new { p.IsPremium, p.PremiumExpiresAt })
             .HasDatabaseName("ix_products_premium");
     }
-
 }

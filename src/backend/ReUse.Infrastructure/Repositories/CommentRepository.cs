@@ -137,4 +137,28 @@ public class CommentRepository : BaseRepository<ProductComment>, ICommentReposit
                           && c.CreatedAt >= since
                           && !c.IsDeleted);
     }
+
+
+    public async Task DeleteByUserIdAsync(Guid userId)
+    {
+
+        var replies = await _context.ProductComments
+            .Where(c => c.UserId == userId && c.ParentCommentId != null)
+            .ToListAsync();
+
+        if (replies.Count > 0)
+        {
+            _context.ProductComments.RemoveRange(replies);
+            await _context.SaveChangesAsync();
+        }
+
+
+        var topLevel = await _context.ProductComments
+            .Where(c => c.UserId == userId)
+            .ToListAsync();
+
+        if (topLevel.Count > 0)
+            _context.ProductComments.RemoveRange(topLevel);
+
+    }
 }
