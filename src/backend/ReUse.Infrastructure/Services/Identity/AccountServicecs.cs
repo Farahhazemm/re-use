@@ -122,7 +122,7 @@ public class AccountService : IAccountService
         await _cache.RemoveAsync($"user:active:{userId}");
     }
 
-    public async Task DeleteAccountAsync(Guid userId, DeactivateAccountRequest request)
+    public async Task DeleteAccountAsync(Guid userId, DeleteAccountRequest request)
     {
         var user = await _unitOfWork.User.GetByIdAsync(userId)
             ?? throw new NotFoundException(nameof(User));

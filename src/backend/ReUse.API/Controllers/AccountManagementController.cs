@@ -47,7 +47,7 @@ public class AccountManagementController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteAccount([FromBody] DeactivateAccountRequest request)
+    public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountRequest request)
     {
         var userId = User.GetBusinessId();
         await _accountService.DeleteAccountAsync(userId, request);

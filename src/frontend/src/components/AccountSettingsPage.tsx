@@ -20,12 +20,12 @@ import type {
   DeleteAccountRequest,
 } from "../services/accountService";
 
-// Constants
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
 const DELETE_CONFIRMATION_PHRASE = "DELETE MY ACCOUNT";
 
-//  Inline primitives
+// ─── Inline primitives (no Radix required) ───────────────────────────────────
 
 function Switch({
   checked,
@@ -63,7 +63,7 @@ function Separator() {
   return <div className="border-t border-gray-200" />;
 }
 
-// PasswordStrength
+// ─── PasswordStrength sub-component ──────────────────────────────────────────
 
 function PasswordStrength({ password }: { password: string }) {
   if (!password) return null;
@@ -103,7 +103,7 @@ function PasswordStrength({ password }: { password: string }) {
   );
 }
 
-// Modal
+// ─── Modal (inline, no Radix) ────────────────────────────────────────────────
 
 function Modal({
   open,
@@ -130,13 +130,13 @@ function Modal({
   );
 }
 
-//Main component
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function AccountSettingsPage() {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
-  //Banner
+  // ── Banner ────────────────────────────────────────────────────────────────
   const [banner, setBanner] = useState<{
     kind: "success" | "error";
     msg: string;
@@ -148,7 +148,7 @@ export function AccountSettingsPage() {
     return () => clearTimeout(timer);
   }, [banner]);
 
-  // Change Password
+  // ── Change Password ───────────────────────────────────────────────────────
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
@@ -207,7 +207,7 @@ export function AccountSettingsPage() {
     }
   };
 
-  // Deactivate
+  // ── Deactivate ────────────────────────────────────────────────────────────
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
   const [deactivateData, setDeactivateData] = useState<DeactivateAccountRequest>({
     password: "",
@@ -251,7 +251,7 @@ export function AccountSettingsPage() {
     }
   };
 
-  // Delete
+  // ── Delete ────────────────────────────────────────────────────────────────
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteData, setDeleteData] = useState<DeleteAccountRequest>({
     password: "",
@@ -288,7 +288,7 @@ export function AccountSettingsPage() {
       await deleteAccount(payload);
       closeDeleteModal();
       await logout();
-      navigate("/");
+      navigate("/login");
     } catch (err) {
       if (err instanceof AuthError && err.status === 403) {
         setDeleteErrors((prev) => ({ ...prev, password: "Incorrect password." }));
@@ -302,7 +302,7 @@ export function AccountSettingsPage() {
     }
   };
 
-  // Render
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top bar */}
@@ -341,7 +341,7 @@ export function AccountSettingsPage() {
               </div>
             )}
 
-            {/* Change Password  */}
+            {/* ── Change Password ─────────────────────────────────────────── */}
             <section>
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
@@ -488,7 +488,7 @@ export function AccountSettingsPage() {
 
             <Separator />
 
-            {/* Two-Factor Authentication (placeholder) */}
+            {/* ── Two-Factor Authentication (placeholder) ─────────────────── */}
             <section>
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
@@ -527,7 +527,7 @@ export function AccountSettingsPage() {
 
             <Separator />
 
-            {/*  Notification Preferences (placeholder) */}
+            {/* ── Notification Preferences (placeholder) ──────────────────── */}
             <section>
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
@@ -555,7 +555,7 @@ export function AccountSettingsPage() {
 
             <Separator />
 
-            {/* Danger Zone */}
+            {/* ── Danger Zone ─────────────────────────────────────────────── */}
             <section>
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
@@ -606,7 +606,7 @@ export function AccountSettingsPage() {
         </div>
       </div>
 
-      {/* Deactivate Modal  */}
+      {/* ── Deactivate Modal ──────────────────────────────────────────────── */}
       <Modal open={showDeactivateModal} onClose={closeDeactivateModal}>
         <div className="mb-4">
           <h2 className="text-lg font-bold text-gray-900">Deactivate Account?</h2>
@@ -690,7 +690,7 @@ export function AccountSettingsPage() {
         </div>
       </Modal>
 
-      {/* Delete Modal  */}
+      {/* ── Delete Modal ──────────────────────────────────────────────────── */}
       <Modal open={showDeleteModal} onClose={closeDeleteModal}>
         <div className="mb-4">
           <h2 className="text-lg font-bold text-red-600">Delete Account Permanently?</h2>

@@ -9,5 +9,5 @@ public interface IAccountService
 
     // Task ReactivateAccountAsync(Guid userId);
     Task EnsureActiveOnLoginAsync(Guid userId);
-    Task DeleteAccountAsync(Guid userId, DeactivateAccountRequest request);
+    Task DeleteAccountAsync(Guid userId, DeleteAccountRequest request);
 }
