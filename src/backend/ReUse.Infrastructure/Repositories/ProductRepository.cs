@@ -31,7 +31,7 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
    .Include(p => p.ProductImages.OrderBy(i => i.DisplayOrder))
    .Include(p => p.Category)
    .Include(p => p.Owner)
-   .Where(p => p.Id == productId && p.Status != ProductStatus.Deleted)
+   .Where(p => p.Id == productId && p.Status != ProductStatus.Deleted && p.Owner.IsActive)
    .FirstOrDefaultAsync();
     #endregion
 
@@ -42,6 +42,7 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
    .Include(p => p.ProductImages.OrderBy(i => i.DisplayOrder))
    .Include(p => p.Owner)
    .Where(p => p.Status == ProductStatus.Active)
+   .Where(p => p.Owner.IsActive)
    .Where(p => p.Category.IsActive && (p.Category.Parent == null || p.Category.Parent.IsActive))
    .Search(filterParams.SearchTerm)
    .FilterByTypes(filterParams.Types)
@@ -61,6 +62,7 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
         => await _context.Products
             .AsNoTracking()
             .Where(p => p.Status == ProductStatus.Active)
+            .Where(p => p.Owner.IsActive)
             .Where(p => p.Category.IsActive && (p.Category.Parent == null || p.Category.Parent.IsActive))
             .GroupBy(p => p.CategoryId)
             .Select(g => new { CategoryId = g.Key, Count = g.Count() })
@@ -72,6 +74,7 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
         => await _context.Products
             .AsNoTracking()
             .CountAsync(p => p.Status == ProductStatus.Active
+                          && p.Owner.IsActive
                           && p.CategoryId == categoryId
                           && p.Category.IsActive
                           && (p.Category.Parent == null || p.Category.Parent.IsActive));
@@ -125,7 +128,8 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
             .Include(p => p.ProductImages)
             .Include(p => p.Owner)
             .Where(p => p.OwnerUserId == ownerId
-                     && p.Status == ProductStatus.Active)
+                     && p.Status == ProductStatus.Active
+                     && p.Owner.IsActive)
             .Search(filterParams.SearchTerm)
             .FilterByTypes(filterParams.Types)
             .FilterByConditions(filterParams.Conditions)
