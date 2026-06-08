@@ -193,4 +193,13 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
         return counts ?? new AdminProductsSummary(0, 0, 0, 0, 0, 0);
     }
     #endregion
+
+    #region DeleteByUserIdAsync
+    public async Task DeleteByUserIdAsync(Guid userId)
+    {
+        await _context.Products
+            .Where(p => p.OwnerUserId == userId)
+            .ExecuteDeleteAsync();
+    }
+    #endregion
 }

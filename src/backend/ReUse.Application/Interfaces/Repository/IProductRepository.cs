@@ -26,4 +26,5 @@ public interface IProductRepository : IBaseRepository<Product>
     Task<PagedResult<Product>> GetAllForAdminAsync(AdminProductFilterParams filterParams);
     Task<Product?> GetForAdminByIdAsync(Guid productId);
     Task<AdminProductsSummary> GetAdminSummaryAsync();
+    Task DeleteByUserIdAsync(Guid userId);
 }

@@ -149,12 +149,11 @@ public class CommentRepository : BaseRepository<ProductComment>, ICommentReposit
         if (replies.Count > 0)
         {
             _context.ProductComments.RemoveRange(replies);
-            await _context.SaveChangesAsync();
         }
 
 
         var topLevel = await _context.ProductComments
-            .Where(c => c.UserId == userId)
+            .Where(c => c.UserId == userId && c.ParentCommentId == null)
             .ToListAsync();
 
         if (topLevel.Count > 0)
