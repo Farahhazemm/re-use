@@ -20,6 +20,7 @@ import PublicUserProfilePageWrapper from "./pages/PublicUserProfilePageWrapper";
 import CreateProductPageWrapper from "./pages/CreateProductPageWrapper";
 import ProductManagementPageWrapper from "./pages/ProductManagementPageWrapper";
 import AccountSettingsPageWrapper from "./pages/AccountSettingsPageWrapper";
+import UserManagementPageWrapper from "./pages/UserManagementPageWrapper";
 
 export const router = createBrowserRouter([
   // Public
@@ -88,6 +89,10 @@ export const router = createBrowserRouter([
       {
         path: "/admin/products",
         Component: ProductManagementPageWrapper,
+      },
+      {
+        path: "/admin/users",
+        Component: UserManagementPageWrapper,
       },
     ],
   },
