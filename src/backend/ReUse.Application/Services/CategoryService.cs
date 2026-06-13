@@ -8,11 +8,10 @@ using ReUse.Application.Exceptions;
 using ReUse.Application.Interfaces;
 using ReUse.Application.Interfaces.Services;
 using ReUse.Application.Interfaces.Services.External;
-using ReUse.Application.Interfaces.Services.External;
 using ReUse.Domain.Entities;
 
-
 namespace ReUse.Application.Services;
+
 
 public class CategoryService : ICategoryService
 {
@@ -20,25 +19,26 @@ public class CategoryService : ICategoryService
     private readonly IMapper _mapper;
     private readonly ICloudinaryService _cloudinary;
     private readonly IImageValidator _imageValidator;
-
+    private readonly ISystemActivityLogService _activityLog;
 
     public CategoryService(
         IUnitOfWork unitOfWork,
-        IMapper mapper, ICloudinaryService cloudinary,       // add
-        IImageValidator imageValidator)       // add)
+        IMapper mapper,
+        ICloudinaryService cloudinary,
+        IImageValidator imageValidator,
+        ISystemActivityLogService activityLog)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _cloudinary = cloudinary;
         _imageValidator = imageValidator;
+        _activityLog = activityLog;
     }
 
     public async Task<PagedResult<CategoryResponse>> GetCategoriesAsync(CategoriesFilterParams filterParams)
     {
         var categories = await _unitOfWork.Category.GetAllAsync(filterParams);
-
         var dtoList = _mapper.Map<List<CategoryResponse>>(categories.Data);
-
         var counts = await _unitOfWork.Product.GetActiveCountsByCategoryAsync();
         dtoList = dtoList.Select(d => d with { ProductCount = counts.GetValueOrDefault(d.Id, 0) }).ToList();
 
@@ -56,29 +56,21 @@ public class CategoryService : ICategoryService
         var categories = await _unitOfWork.Category.GetAllAsync();
 
         if (!includeInactive)
-        {
             categories = categories.Where(c => c.IsActive).ToList();
-        }
 
         var dtos = _mapper.Map<List<CategoryResponse>>(categories);
-
         var counts = await _unitOfWork.Product.GetActiveCountsByCategoryAsync();
         dtos = dtos.Select(d => d with { ProductCount = counts.GetValueOrDefault(d.Id, 0) }).ToList();
 
         var lookup = dtos.ToDictionary(c => c.Id);
-
         var roots = new List<CategoryResponse>();
 
         foreach (var dto in dtos)
         {
             if (dto.ParentId == null)
-            {
                 roots.Add(dto);
-            }
             else if (lookup.TryGetValue(dto.ParentId.Value, out var parent))
-            {
                 parent.Subcategories.Add(dto);
-            }
         }
 
         return roots;
@@ -86,54 +78,45 @@ public class CategoryService : ICategoryService
 
     public async Task<CategoryResponse?> GetByIdAsync(Guid id)
     {
-        var category = await _unitOfWork.Category.GetByIdAsync(id);
-
-        if (category == null)
-            throw new NotFoundException("Category not found");
+        var category = await _unitOfWork.Category.GetByIdAsync(id)
+            ?? throw new NotFoundException("Category not found");
 
         var dto = _mapper.Map<CategoryResponse>(category);
-
         var count = await _unitOfWork.Product.GetActiveCountForCategoryAsync(id);
-        dto = dto with { ProductCount = count };
-
-        return dto;
+        return dto with { ProductCount = count };
     }
 
-    public async Task<CategoryResponse> CreateAsync(CreateCategoryRequest request)
+    public async Task<CategoryResponse> CreateAsync(CreateCategoryRequest request, Guid? actorAdminId = null)
     {
         if (request.ParentId.HasValue)
         {
             var parentExists = await _unitOfWork.Category.ExistsAsync(request.ParentId.Value);
-
             if (!parentExists)
                 throw new NotFoundException("Parent category not found");
         }
 
         if (await _unitOfWork.Category.NameExistsAsync(request.Name))
-        {
             throw new ConflictException("Category name already exists");
-        }
 
         if (await _unitOfWork.Category.SlugExistsAsync(request.Slug))
-        {
             throw new ConflictException("Category slug already exists");
-        }
 
         var category = _mapper.Map<Category>(request);
-
         _unitOfWork.Category.Add(category);
-
         await _unitOfWork.SaveChangesAsync();
+
+        if (actorAdminId.HasValue)
+        {
+            await _activityLog.LogCategoryCreatedAsync(actorAdminId.Value, category.Id, category.Name);
+        }
 
         return _mapper.Map<CategoryResponse>(category);
     }
 
-    public async Task<CategoryResponse> UpdateAsync(Guid id, UpdateCategoryRequest request)
+    public async Task<CategoryResponse> UpdateAsync(Guid id, UpdateCategoryRequest request, Guid? actorAdminId = null)
     {
-        var category = await _unitOfWork.Category.GetByIdAsync(id);
-
-        if (category == null)
-            throw new NotFoundException("Category not found");
+        var category = await _unitOfWork.Category.GetByIdAsync(id)
+            ?? throw new NotFoundException("Category not found");
 
         if (request.ParentId.HasValue)
         {
@@ -141,53 +124,49 @@ public class CategoryService : ICategoryService
                 throw new ConflictException("Category cannot be its own parent");
 
             var parentExists = await _unitOfWork.Category.ExistsAsync(request.ParentId.Value);
-
             if (!parentExists)
                 throw new NotFoundException("Parent category not found");
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Name) && await _unitOfWork.Category.NameExistsAsync(request.Name, category.Id))
-        {
+        if (!string.IsNullOrWhiteSpace(request.Name) &&
+            await _unitOfWork.Category.NameExistsAsync(request.Name, category.Id))
             throw new ConflictException("Category name already exists");
-        }
 
-        if (!string.IsNullOrWhiteSpace(request.Slug) && await _unitOfWork.Category.SlugExistsAsync(request.Slug, category.Id))
-        {
+        if (!string.IsNullOrWhiteSpace(request.Slug) &&
+            await _unitOfWork.Category.SlugExistsAsync(request.Slug, category.Id))
             throw new ConflictException("Category slug already exists");
-        }
 
         _mapper.Map(request, category);
-
         category.UpdatedAt = DateTime.UtcNow;
-
         _unitOfWork.Category.Update(category);
-
         await _unitOfWork.SaveChangesAsync();
+
+        if (actorAdminId.HasValue)
+            _ = _activityLog.LogCategoryUpdatedAsync(actorAdminId.Value, category.Id, category.Name);
 
         return _mapper.Map<CategoryResponse>(category);
     }
 
-    public async Task DeleteAsync(Guid id)
+    public async Task DeleteAsync(Guid id, Guid? actorAdminId = null)
     {
-        var category = await _unitOfWork.Category.GetByIdAsync(id);
+        var category = await _unitOfWork.Category.GetByIdAsync(id)
+            ?? throw new NotFoundException("Category not found");
 
-        if (category == null)
-            throw new NotFoundException("Category not found");
-
+        var name = category.Name;
         _unitOfWork.Category.Remove(category);
-
         await _unitOfWork.SaveChangesAsync();
+
+        if (actorAdminId.HasValue)
+            _ = _activityLog.LogCategoryDeletedAsync(actorAdminId.Value, id, name);
     }
 
     public async Task<CategoryResponse> UploadIconAsync(Guid id, IFormFile file)
     {
-        var category = await _unitOfWork.Category.GetByIdAsync(id);
-        if (category == null)
-            throw new NotFoundException("Category not found");
+        var category = await _unitOfWork.Category.GetByIdAsync(id)
+            ?? throw new NotFoundException("Category not found");
 
         _imageValidator.Validate(file);
 
-        // Delete old icon from Cloudinary if one exists
         if (!string.IsNullOrWhiteSpace(category.IconPublicId))
             await _cloudinary.DeleteAsync(category.IconPublicId);
 
@@ -202,5 +181,4 @@ public class CategoryService : ICategoryService
 
         return _mapper.Map<CategoryResponse>(category);
     }
-
 }

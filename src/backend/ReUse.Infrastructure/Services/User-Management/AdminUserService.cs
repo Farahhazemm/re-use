@@ -29,8 +29,16 @@ public class AdminUserService : IAdminUserService
     private readonly ITokenService _tokenService;
     private readonly IDistributedCache _cache;
     private readonly IMapper _mapper;
+    private readonly ISystemActivityLogService _activityLog;
 
-    public AdminUserService(IUnitOfWork unitOfWork, IIdentityUserRepository identityUserRepo, UserManager<ApplicationUser> userManager, ITokenService tokenService, IDistributedCache cache, IMapper mapper)
+    public AdminUserService(
+        IUnitOfWork unitOfWork,
+        IIdentityUserRepository identityUserRepo,
+        UserManager<ApplicationUser> userManager,
+        ITokenService tokenService,
+        IDistributedCache cache,
+        IMapper mapper,
+        ISystemActivityLogService activityLog)
     {
         _unitOfWork = unitOfWork;
         _identityUserRepo = identityUserRepo;
@@ -38,18 +46,16 @@ public class AdminUserService : IAdminUserService
         _tokenService = tokenService;
         _cache = cache;
         _mapper = mapper;
+        _activityLog = activityLog;
     }
 
     #region GetAllUsers
     public async Task<PagedResult<AdminUserResponse>> GetAllUsersAsync(
-       AdminUserFilterParams filterParams,
-       Guid currentAdminId)
+        AdminUserFilterParams filterParams,
+        Guid currentAdminId)
     {
-
-        var currentAdmin = await _unitOfWork.User.GetByIdAsync(currentAdminId);
-
-        if (currentAdmin is null)
-            throw new NotFoundException("Current admin domain user not found");
+        var currentAdmin = await _unitOfWork.User.GetByIdAsync(currentAdminId)
+            ?? throw new NotFoundException("Current admin domain user not found");
 
         HashSet<string>? allowedIdentityIds = null;
 
@@ -59,7 +65,6 @@ public class AdminUserService : IAdminUserService
             allowedIdentityIds = await _identityUserRepo.GetUserIdsByRoleAsync(roleName);
 
             if (allowedIdentityIds.Count == 0)
-            {
                 return new PagedResult<AdminUserResponse>
                 {
                     Data = [],
@@ -67,14 +72,12 @@ public class AdminUserService : IAdminUserService
                     PageSize = filterParams.Pagination.PageSize,
                     TotalRecords = 0
                 };
-            }
         }
 
         var pagedDomainUsers = await _unitOfWork.User
             .GetPagedAdminAsync(filterParams, allowedIdentityIds, excludeUserId: currentAdmin.Id);
 
         if (pagedDomainUsers.Data.Count == 0)
-        {
             return new PagedResult<AdminUserResponse>
             {
                 Data = [],
@@ -82,12 +85,8 @@ public class AdminUserService : IAdminUserService
                 PageSize = pagedDomainUsers.PageSize,
                 TotalRecords = pagedDomainUsers.TotalRecords
             };
-        }
 
-        var identityIds = pagedDomainUsers.Data
-            .Select(u => u.IdentityUserId)
-            .ToList();
-
+        var identityIds = pagedDomainUsers.Data.Select(u => u.IdentityUserId).ToList();
         var rolesMap = await _identityUserRepo.GetRolesByUserIdsAsync(identityIds);
 
         var responseDtos = pagedDomainUsers.Data
@@ -147,15 +146,11 @@ public class AdminUserService : IAdminUserService
         await _unitOfWork.SaveChangesAsync();
 
         var claimResult = await _identityUserRepo.AddClaimAsync(
-                identityUser,
-                new Claim("business_user_id", businessUser.Id.ToString())
-            );
+            identityUser,
+            new Claim("business_user_id", businessUser.Id.ToString()));
 
         if (!claimResult.Succeeded)
-        {
-            throw new IdentityOperationException(
-                claimResult.Errors.Select(e => e.Description));
-        }
+            throw new IdentityOperationException(claimResult.Errors.Select(e => e.Description));
 
         return _mapper.Map<AdminUserResponse>(new AdminUserMappingSource
         {
@@ -165,14 +160,13 @@ public class AdminUserService : IAdminUserService
     }
     #endregion
 
-    #region UpdateNewUser
+    #region UpdateUser
     public async Task<AdminUserResponse> UpdateUserAsync(Guid userId, UpdateAdminUserRequest request, Guid currentAdminId)
     {
         var currentAdminDomainUser = await _unitOfWork.User.GetByIdAsync(currentAdminId);
 
         if (currentAdminDomainUser is not null && userId == currentAdminDomainUser.Id)
             throw new BadRequestException("You cannot Update your own account.");
-
 
         var domainUser = await _unitOfWork.User.GetByIdAsync(userId)
             ?? throw new NotFoundException(nameof(User));
@@ -199,9 +193,7 @@ public class AdminUserService : IAdminUserService
             if (!existingRoles.Contains(newRoleName))
             {
                 foreach (var role in existingRoles)
-                {
                     await _identityUserRepo.RemoveFromRoleAsync(identityUser, role);
-                }
 
                 var addResult = await _identityUserRepo.AddToRoleAsync(identityUser, newRoleName);
                 if (!addResult.Succeeded)
@@ -226,14 +218,13 @@ public class AdminUserService : IAdminUserService
             Roles = currentRoles
         });
     }
-
     #endregion
 
     #region DeleteUser
     public async Task DeleteUserAsync(Guid userId, Guid currentAdminId)
     {
         var domainUser = await _unitOfWork.User.GetByIdAsync(userId)
-        ?? throw new NotFoundException(nameof(User));
+            ?? throw new NotFoundException(nameof(User));
 
         var currentAdminDomainUser = await _unitOfWork.User.GetByIdAsync(currentAdminId);
 
@@ -272,11 +263,9 @@ public class AdminUserService : IAdminUserService
         var identityUser = await _identityUserRepo.GetByIdWithRefreshTokens(domainUser.IdentityUserId)
             ?? throw new NotFoundException(nameof(ApplicationUser));
 
-        //  Deactivate domain user
         domainUser.IsActive = false;
         domainUser.DeactivatedAt = DateTime.UtcNow;
 
-        // Lock out the Identity user permanently 
         await _userManager.SetLockoutEnabledAsync(identityUser, true);
         await _userManager.SetLockoutEndDateAsync(identityUser, DateTimeOffset.MaxValue);
 
@@ -286,6 +275,8 @@ public class AdminUserService : IAdminUserService
         await _unitOfWork.SaveChangesAsync();
 
         await _cache.RemoveAsync($"user:active:{userId}");
+
+        _ = _activityLog.LogUserBlockedAsync(currentAdminId, userId);
 
         var identityIds = new List<string> { domainUser.IdentityUserId };
         var rolesMap = await _identityUserRepo.GetRolesByUserIdsAsync(identityIds);
@@ -311,18 +302,18 @@ public class AdminUserService : IAdminUserService
         var identityUser = await _identityUserRepo.GetByIdWithRefreshTokens(domainUser.IdentityUserId)
             ?? throw new NotFoundException(nameof(ApplicationUser));
 
-        //  Reactivate domain user
         domainUser.IsActive = true;
         domainUser.DeactivatedAt = null;
         domainUser.DeactivationReason = null;
 
-        //  Clear the Identity lockout
         await _userManager.SetLockoutEndDateAsync(identityUser, null);
         await _userManager.ResetAccessFailedCountAsync(identityUser);
 
         await _unitOfWork.SaveChangesAsync();
 
         await _cache.RemoveAsync($"user:active:{userId}");
+
+        _ = _activityLog.LogUserUnblockedAsync(currentAdminId, userId);
 
         var identityIds = new List<string> { domainUser.IdentityUserId };
         var rolesMap = await _identityUserRepo.GetRolesByUserIdsAsync(identityIds);
@@ -335,6 +326,4 @@ public class AdminUserService : IAdminUserService
         });
     }
     #endregion
-
-
 }

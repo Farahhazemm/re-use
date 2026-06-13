@@ -1,4 +1,3 @@
-
 using Microsoft.AspNetCore.Http;
 
 using ReUse.Application.DTOs;
@@ -10,10 +9,9 @@ public interface ICategoryService
 {
     Task<PagedResult<CategoryResponse>> GetCategoriesAsync(CategoriesFilterParams filterParams);
     Task<List<CategoryResponse>> GetCategoryTreeAsync(bool includeInactive = false);
-    Task<CategoryResponse?> GetByIdAsync(Guid id);
-    Task<CategoryResponse> CreateAsync(CreateCategoryRequest request);
-    Task<CategoryResponse> UpdateAsync(Guid id, UpdateCategoryRequest request);
-    Task DeleteAsync(Guid id);
-
+    Task<CategoryResponse> GetByIdAsync(Guid id);
+    Task<CategoryResponse> CreateAsync(CreateCategoryRequest request, Guid? actorAdminId = null);
+    Task<CategoryResponse> UpdateAsync(Guid id, UpdateCategoryRequest request, Guid? actorAdminId = null);
+    Task DeleteAsync(Guid id, Guid? actorAdminId = null);
     Task<CategoryResponse> UploadIconAsync(Guid id, IFormFile file);
 }

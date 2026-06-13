@@ -34,6 +34,9 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<Feedback> Feedbacks { get; set; }
 
+    public DbSet<SystemActivityLog> SystemActivityLogs { get; set; }
+
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

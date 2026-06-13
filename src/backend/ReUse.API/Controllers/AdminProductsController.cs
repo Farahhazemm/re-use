@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using ReUse.API.Extensions;
 using ReUse.API.Responses;
 using ReUse.Application.DTOs;
 using ReUse.Application.DTOs.Products;
@@ -10,9 +11,7 @@ using ReUse.Application.Interfaces.Services;
 
 namespace ReUse.API.Controllers;
 
-/// <summary>
-/// Admin endpoints for managing products
-/// </summary>
+/// <summary>Admin endpoints for managing products</summary>
 [ApiController]
 [Route("api/admin/products")]
 [Authorize(Roles = "Admin")]
@@ -21,18 +20,18 @@ public class AdminProductsController : ControllerBase
 {
     private readonly IProductService _productService;
     private readonly IPromotionService _promotionService;
+    private readonly ISystemActivityLogService _activityLog;
 
-    public AdminProductsController(IProductService productService, IPromotionService promotionService)
+    public AdminProductsController(
+        IProductService productService,
+        IPromotionService promotionService,
+        ISystemActivityLogService activityLog)
     {
         _productService = productService;
         _promotionService = promotionService;
+        _activityLog = activityLog;
     }
 
-    /// <summary>
-    /// Get all products (Admin view) with search, filters, sorting and pagination.
-    /// Includes products of every status (Active, Sold, Closed, Deleted, UnderReview).
-    /// </summary>
-    /// <response code="200">Products retrieved successfully</response>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<ProductResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] AdminProductFilterParams filterParams)
@@ -41,12 +40,6 @@ public class AdminProductsController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>
-    /// Get a product by ID (Admin view, includes any status).
-    /// </summary>
-    /// <param name="productId">Product ID</param>
-    /// <response code="200">Product retrieved successfully</response>
-    /// <response code="404">Product not found</response>
     [HttpGet("{productId:guid}")]
     [ProducesResponseType(typeof(ProductDetailsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
@@ -56,25 +49,18 @@ public class AdminProductsController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>
-    /// Delete a product (Admin). Performs a soft-delete by setting Status to Deleted.
-    /// </summary>
-    /// <param name="productId">Product ID</param>
-    /// <response code="200">Product deleted successfully</response>
-    /// <response code="404">Product not found</response>
+    /// <summary>Delete a product (Admin). Soft-delete by setting Status to Deleted.</summary>
     [HttpDelete("{productId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid productId)
     {
+        var adminId = User.GetBusinessId();
         await _productService.DeleteProductAsync(productId, Guid.Empty, isAdmin: true);
+        _ = _activityLog.LogProductDeletedByAdminAsync(adminId, productId);
         return Ok(new { message = "Product deleted successfully" });
     }
 
-    /// <summary>
-    /// Get total product counts grouped by status (Admin dashboard summary).
-    /// </summary>
-    /// <response code="200">Summary retrieved successfully</response>
     [HttpGet("summary")]
     [ProducesResponseType(typeof(AdminProductsSummaryResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetSummary()
@@ -83,12 +69,6 @@ public class AdminProductsController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>
-    /// Update a Regular product (Admin) without ownership restriction.
-    /// </summary>
-    /// <response code="204">Product updated successfully</response>
-    /// <response code="400">Invalid product type or request data</response>
-    /// <response code="404">Product not found</response>
     [HttpPatch("regular/{productId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
@@ -99,12 +79,6 @@ public class AdminProductsController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>
-    /// Update a Swap product (Admin) without ownership restriction.
-    /// </summary>
-    /// <response code="204">Product updated successfully</response>
-    /// <response code="400">Invalid product type or request data</response>
-    /// <response code="404">Product not found</response>
     [HttpPatch("swap/{productId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
@@ -115,12 +89,6 @@ public class AdminProductsController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>
-    /// Update a Wanted product (Admin) without ownership restriction.
-    /// </summary>
-    /// <response code="204">Product updated successfully</response>
-    /// <response code="400">Invalid product type or request data</response>
-    /// <response code="404">Product not found</response>
     [HttpPatch("wanted/{productId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
@@ -131,66 +99,54 @@ public class AdminProductsController : ControllerBase
         return NoContent();
     }
 
-    /// <summary>
-    /// Change a product status (Admin moderation).
-    /// </summary>
-    /// <response code="204">Product status changed successfully</response>
-    /// <response code="400">Invalid status</response>
-    /// <response code="404">Product not found</response>
+    /// <summary>Change a product status (Admin moderation).</summary>
     [HttpPatch("{productId:guid}/status")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ChangeStatus(Guid productId, [FromBody] ChangeProductStatusRequest request)
     {
+        var adminId = User.GetBusinessId();
         await _productService.ChangeProductStatusByAdminAsync(productId, request.Status);
+        _ = _activityLog.LogProductModerationAsync(adminId, productId, request.Status);
         return NoContent();
     }
 
-    /// <summary>
-    /// Restore a previously deleted product (Admin). Sets Status back to Active.
-    /// </summary>
-    /// <response code="204">Product restored successfully</response>
-    /// <response code="400">Product is not in a deleted state</response>
-    /// <response code="404">Product not found</response>
+    /// <summary>Restore a previously deleted product (Admin).</summary>
     [HttpPatch("{productId:guid}/restore")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Restore(Guid productId)
     {
+        var adminId = User.GetBusinessId();
         await _productService.RestoreProductByAdminAsync(productId);
+        _ = _activityLog.LogProductModerationAsync(adminId, productId, Domain.Enums.ProductStatus.Active, reason: "Restored by admin.");
         return NoContent();
     }
 
-    /// <summary>
-    /// Promote a product to premium (Admin). Bypasses payment and sets the expiry
-    /// based on the requested duration in days.
-    /// </summary>
-    /// <response code="204">Product promoted to premium successfully</response>
-    /// <response code="400">Invalid duration</response>
-    /// <response code="404">Product not found</response>
+    /// <summary>Promote a product to premium (Admin). Bypasses payment.</summary>
     [HttpPatch("{productId:guid}/premium")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> SetPremium(Guid productId, [FromBody] PremiumRequest request)
     {
+        var adminId = User.GetBusinessId();
         await _promotionService.SetPremiumAsync(productId, request.DurationDays);
+        _ = _activityLog.LogPremiumGrantedByAdminAsync(adminId, productId, request.DurationDays);
         return NoContent();
     }
 
-    /// <summary>
-    /// Remove premium status from a product (Admin).
-    /// </summary>
-    /// <response code="204">Premium status removed successfully</response>
-    /// <response code="404">Product not found</response>
+    /// <summary>Remove premium status from a product (Admin).</summary>
     [HttpDelete("{productId:guid}/premium")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RemovePremium(Guid productId)
     {
+        var adminId = User.GetBusinessId();
         await _promotionService.RemovePremiumAsync(productId);
+        _ = _activityLog.LogPremiumRemovedByAdminAsync(adminId, productId);
         return NoContent();
     }
 }

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using ReUse.API.Extensions;
 using ReUse.API.Responses;
 using ReUse.Application.DTOs.Categories;
 using ReUse.Application.Interfaces.Services;
@@ -23,10 +24,7 @@ public class AdminCategoriesController : ControllerBase
         _service = service;
     }
 
-    /// <summary>
-    /// Get the full category tree including inactive categories (Admin view)
-    /// </summary>
-    /// <response code="200">Category tree retrieved successfully</response>
+    /// <summary>Get the full category tree including inactive categories (Admin view)</summary>
     [HttpGet("tree")]
     [ProducesResponseType(typeof(IEnumerable<CategoryResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetTree()
@@ -35,76 +33,47 @@ public class AdminCategoriesController : ControllerBase
         return Ok(categories);
     }
 
-    /// <summary>
-    /// Create a new category (root or subcategory)
-    /// </summary>
-    /// <param name="dto">Category creation data</param>
-    /// <returns>The created category</returns>
-    /// <response code="201">Category created successfully</response>
-    /// <response code="400">Invalid request data</response>
-    /// <response code="404">Parent category not found</response>
+    /// <summary>Create a new category (root or subcategory)</summary>
     [HttpPost]
     [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Create([FromBody] CreateCategoryRequest dto)
     {
-        var category = await _service.CreateAsync(dto);
-
+        var adminId = User.GetBusinessId();
+        var category = await _service.CreateAsync(dto, actorAdminId: adminId);
         return CreatedAtAction(nameof(GetById), new { id = category.Id }, category);
     }
 
-    /// <summary>
-    /// Get a category by ID (Admin view)
-    /// </summary>
-    /// <param name="id">Category ID</param>
-    /// <returns>Category details</returns>
-    /// <response code="200">Category retrieved successfully</response>
-    /// <response code="404">Category not found</response>
+    /// <summary>Get a category by ID (Admin view)</summary>
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id)
     {
         var category = await _service.GetByIdAsync(id);
-
-        if (category == null)
-            return NotFound();
-
         return Ok(category);
     }
 
-    /// <summary>
-    /// Update an existing category
-    /// </summary>
-    /// <param name="id">Category ID</param>
-    /// <param name="dto">Updated category data</param>
-    /// <returns>Updated category</returns>
-    /// <response code="200">Category updated successfully</response>
-    /// <response code="400">Invalid request data</response>
-    /// <response code="404">Category not found</response>
+    /// <summary>Update an existing category</summary>
     [HttpPatch("{id}")]
     [ProducesResponseType(typeof(CategoryResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateCategoryRequest dto)
     {
-        var category = await _service.UpdateAsync(id, dto);
+        var adminId = User.GetBusinessId();
+        var category = await _service.UpdateAsync(id, dto, actorAdminId: adminId);
         return Ok(category);
     }
 
-    /// <summary>
-    /// Delete a category
-    /// </summary>
-    /// <param name="id">Category ID</param>
-    /// <returns>Success message</returns>
-    /// <response code="200">Category deleted successfully</response>
-    /// <response code="404">Category not found</response>
+    /// <summary>Delete a category</summary>
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id)
     {
-        await _service.DeleteAsync(id);
+        var adminId = User.GetBusinessId();
+        await _service.DeleteAsync(id, actorAdminId: adminId);
         return Ok(new { message = "Category deleted successfully" });
     }
 
@@ -115,8 +84,7 @@ public class AdminCategoriesController : ControllerBase
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UploadIcon(Guid id, [FromForm] UploadIconRequest request)
     {
-        var icon = request.File;
-        var category = await _service.UploadIconAsync(id, icon);
+        var category = await _service.UploadIconAsync(id, request.File);
         return Ok(category);
     }
 }

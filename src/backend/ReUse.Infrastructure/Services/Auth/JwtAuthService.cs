@@ -11,12 +11,16 @@ using ReUse.Application.DTOs.Auth;
 using ReUse.Application.DTOs.Users.UserProfile;
 using ReUse.Application.Exceptions;
 using ReUse.Application.Interfaces;
+using ReUse.Application.Interfaces.Services;
 using ReUse.Application.Interfaces.Services.External;
 using ReUse.Domain.Entities;
 using ReUse.Infrastructure.Interfaces.Repositories;
 using ReUse.Infrastructure.Interfaces.Services;
 
 namespace ReUse.Infrastructure.Services.Auth;
+
+// TODO: Inject IRequestContext once available so IpAddress/UserAgent are resolved centrally
+//       rather than being absent from auth-level log calls.
 
 public class JwtAuthService : IAuthService
 {
@@ -27,6 +31,8 @@ public class JwtAuthService : IAuthService
     private readonly IAccountService _accountService;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IMapper _mapper;
+    private readonly ISystemActivityLogService _activityLog;
+
     public JwtAuthService(
         IUnitOfWork uow,
         ITokenService tokenService,
@@ -34,8 +40,8 @@ public class JwtAuthService : IAuthService
         IMapper mapper,
         IAccountService accountService,
         UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager
-        )
+        SignInManager<ApplicationUser> signInManager,
+        ISystemActivityLogService activityLog)
     {
         _uow = uow;
         _tokenService = tokenService;
@@ -44,13 +50,16 @@ public class JwtAuthService : IAuthService
         _mapper = mapper;
         _userManager = userManager;
         _signInManager = signInManager;
+        _activityLog = activityLog;
     }
+
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
     {
         var user = await _identityUserRepo.GetByEmail(request.Email);
 
         if (user == null)
         {
+            await _activityLog.LogLoginFailedAsync(request.Email, reason: "User not found.");
             throw new InvalidCredentialsException();
         }
 
@@ -58,42 +67,52 @@ public class JwtAuthService : IAuthService
         {
             var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
 
-            // Admin block
             if (lockoutEnd == DateTimeOffset.MaxValue)
+            {
+                _ = _activityLog.LogLoginFailedAsync(request.Email, reason: "Account blocked by admin.");
                 throw new UserBlockedException();
+            }
 
-            // Failed login attempts lockout
+            _ = _activityLog.LogLoginFailedAsync(request.Email, reason: "Account temporarily locked out.");
             throw new UserLockedOutException();
         }
 
-        // Password validation with lockout support
         var signInResult = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
 
         if (signInResult.IsLockedOut)
+        {
+            _ = _activityLog.LogLoginFailedAsync(request.Email, reason: "Locked out after failed attempts.");
             throw new UserLockedOutException();
+        }
 
         if (!signInResult.Succeeded)
+        {
+            _ = _activityLog.LogLoginFailedAsync(request.Email, reason: "Invalid credentials.");
             throw new InvalidCredentialsException();
+        }
 
         if (!user.EmailConfirmed)
         {
+            _ = _activityLog.LogLoginFailedAsync(request.Email, reason: "Email not confirmed.");
             throw new EmailNotConfirmedException();
         }
 
         var domainUser = await _uow.User.GetByIdentityIdAsync(user.Id)
-         ?? throw new NotFoundException(nameof(User));
-
-        //  Auto-reactivate if account is deactivated
-        //    This is the ONLY place reactivation happens no separate endpoint needed.
-
+            ?? throw new NotFoundException(nameof(User));
 
         await _accountService.EnsureActiveOnLoginAsync(domainUser.Id);
 
         var jwtToken = await _tokenService.GenerateJwtAsync(user);
-
         var refreshToken = await _tokenService.CreateRefreshTokenAsync(user);
 
-        return new LoginResponse(user.Email!, new JwtSecurityTokenHandler().WriteToken(jwtToken), refreshToken.Token, jwtToken.ValidTo, refreshToken.ExpiresAt);
+        _ = _activityLog.LogLoginSuccessAsync(domainUser.Id);
+
+        return new LoginResponse(
+            user.Email!,
+            new JwtSecurityTokenHandler().WriteToken(jwtToken),
+            refreshToken.Token,
+            jwtToken.ValidTo,
+            refreshToken.ExpiresAt);
     }
 
     public async Task<LoginResponse> RefreshAsync(RefreshTokenRequest refreshToken)
@@ -101,27 +120,25 @@ public class JwtAuthService : IAuthService
         var user = await _identityUserRepo.GetByRefreshTokenWithRefreshTokens(refreshToken.RefreshToken);
 
         if (user == null)
-        {
             throw new InvalidRefreshTokenException();
-        }
 
         var newRefreshToken = await _tokenService.CreateRefreshTokenAsync(user, refreshToken.RefreshToken);
-
         var jwtToken = await _tokenService.GenerateJwtAsync(user);
 
-        return new LoginResponse(user.Email!, new JwtSecurityTokenHandler().WriteToken(jwtToken), newRefreshToken.Token, jwtToken.ValidTo, newRefreshToken.ExpiresAt);
+        return new LoginResponse(
+            user.Email!,
+            new JwtSecurityTokenHandler().WriteToken(jwtToken),
+            newRefreshToken.Token,
+            jwtToken.ValidTo,
+            newRefreshToken.ExpiresAt);
     }
 
     public async Task LogoutAsync(string identityUserId)
     {
         var user = await _identityUserRepo.GetByIdWithRefreshTokens(identityUserId);
+        if (user == null) return;
 
-        if (user == null)
-        {
-            return;
-        }
         _tokenService.RevokeAllAsync(user);
-
         await _identityUserRepo.UpdateAsync(user);
     }
 
@@ -132,38 +149,21 @@ public class JwtAuthService : IAuthService
 
         try
         {
-
-            // 1. Create Identity User
-
             identityUser = new ApplicationUser
             {
                 UserName = request.UserName,
                 Email = request.Email
             };
 
-            var createUserResult = await _identityUserRepo
-                .CreateAsync(identityUser, request.Password);
+            var createUserResult = await _identityUserRepo.CreateAsync(identityUser, request.Password);
 
             if (!createUserResult.Succeeded)
-            {
-                throw new IdentityOperationException(
-                    createUserResult.Errors.Select(e => e.Description));
-            }
+                throw new IdentityOperationException(createUserResult.Errors.Select(e => e.Description));
 
-
-            // 2. Assign Role
-
-            var roleResult = await _identityUserRepo
-                .AddToRoleAsync(identityUser, "User");
+            var roleResult = await _identityUserRepo.AddToRoleAsync(identityUser, "User");
 
             if (!roleResult.Succeeded)
-            {
-                throw new IdentityOperationException(
-                    roleResult.Errors.Select(e => e.Description));
-            }
-
-
-            // 3. Create Business User
+                throw new IdentityOperationException(roleResult.Errors.Select(e => e.Description));
 
             businessUser = new User
             {
@@ -173,45 +173,28 @@ public class JwtAuthService : IAuthService
             };
 
             _uow.User.Add(businessUser);
-
             await _uow.SaveChangesAsync();
-
-            // 4. Add Claim (linking)
 
             var claimResult = await _identityUserRepo.AddClaimAsync(
                 identityUser,
-                new Claim("business_user_id", businessUser.Id.ToString())
-            );
+                new Claim("business_user_id", businessUser.Id.ToString()));
 
             if (!claimResult.Succeeded)
-            {
-                throw new IdentityOperationException(
-                    claimResult.Errors.Select(e => e.Description));
-            }
+                throw new IdentityOperationException(claimResult.Errors.Select(e => e.Description));
 
-
-            // 5. Return DTO
             return _mapper.Map<UserProfileResponse>(businessUser);
-
         }
         catch
         {
-
-            // COMPENSATION LOGIC
-
-
-            // 1. Delete business user if created
+            // Compensation logic
             if (businessUser != null)
             {
                 _uow.User.Remove(businessUser);
                 await _uow.SaveChangesAsync();
             }
 
-            // 2. Delete identity user if created
             if (identityUser != null)
-            {
                 await _identityUserRepo.DeleteAsync(identityUser);
-            }
 
             throw;
         }
