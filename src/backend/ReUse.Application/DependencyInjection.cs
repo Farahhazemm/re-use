@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<IRecommendationService, RecommendationService>();
         services.AddScoped<IFeedbackService, FeedbackService>();
         services.AddScoped<IConversationService, ConversationService>();
+        services.AddScoped<IReportService, ReportService>();
         #endregion
 
         // Recommendation weights 
