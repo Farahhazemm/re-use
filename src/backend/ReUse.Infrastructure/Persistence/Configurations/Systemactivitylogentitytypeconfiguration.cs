@@ -65,6 +65,12 @@ public class SystemActivityLogEntityTypeConfiguration : IEntityTypeConfiguration
                .OnDelete(DeleteBehavior.SetNull)
                .IsRequired(false);
 
+        builder.Property(l => l.ActorName)
+               .HasMaxLength(256);
+
+        builder.Property(l => l.ActorEmail)
+               .HasMaxLength(256);
+
         // Indexes 
 
         builder.HasIndex(l => l.CreatedAt);

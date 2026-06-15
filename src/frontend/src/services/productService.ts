@@ -40,6 +40,36 @@ export interface ProductResponse {
   categoryName: string;
 }
 
+export interface ProductDetailsResponse {
+  id: string;
+  title: string;
+  description: string;
+  type: ProductType;
+  condition: string | null;
+  status: string;
+  locationCity: string | null;
+  locationCountry: string | null;
+  price: number | null;
+  allowNegotiation: boolean | null;
+  wantedItemTitle: string | null;
+  wantedItemDescription: string | null;
+  wantedCondition: string | null;
+  desiredPriceMin: number | null;
+  desiredPriceMax: number | null;
+  images: string[];
+  createdAt: string;
+  categoryId: string;
+  categoryName: string;
+  ownerUserId: string;
+  ownerUserName: string;
+  memberSince: string;
+  ownerRatingsAverage: number;
+  ownerRatingsCount: number;
+  ownerIsVerified: boolean;
+  isPremium: boolean;
+  premiumExpiresAt: string | null;
+}
+
 export interface ProductsQuery {
   pageNumber?: number;
   pageSize?: number;
@@ -50,7 +80,7 @@ export interface ProductsQuery {
   minPrice?: number;
   maxPrice?: number;
   location?: string;
-  sortBy?: "Newest" | "Price";
+  sortBy?: "Relevance" | "Newest" | "Price";
   sortDirection?: "Asc" | "Desc";
 }
 
@@ -102,11 +132,11 @@ export async function listProducts(
   return handleResponse<PagedResult<ProductResponse>>(res);
 }
 
-export async function getProductById(productId: string): Promise<ProductResponse> {
+export async function getProductDetails(productId: string): Promise<ProductDetailsResponse> {
   const res = await fetch(`${BASE_URL}/Product/${productId}`, {
     method: "GET",
   });
-  return handleResponse<ProductResponse>(res);
+  return handleResponse<ProductDetailsResponse>(res);
 }
 
 export async function getProductsByUser(
@@ -157,6 +187,44 @@ export async function getMyListings(query: MyListingsQuery = {}): Promise<Seller
     credentials: "include",
   });
   return handleResponse<SellerDashboardResponse>(res);
+}
+
+export interface PremiumPriceResponse {
+  durationDays: number;
+  amount: number;
+  currency: string;
+}
+
+/** GET /api/Product/premium/price — price quote for a premium duration. */
+export async function getPremiumPrice(durationDays: number): Promise<PremiumPriceResponse> {
+  const res = await fetch(`${BASE_URL}/Product/premium/price?DurationDays=${durationDays}`, {
+    method: "GET",
+    credentials: "include",
+  });
+  return handleResponse<PremiumPriceResponse>(res);
+}
+
+/** POST /api/Product/{productId}/premium — start premium payment, returns Paymob payment URL. */
+export async function makePremium(
+  productId: string,
+  durationDays: number
+): Promise<{ paymentUrl: string }> {
+  const res = await fetch(`${BASE_URL}/Product/${productId}/premium`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ durationDays }),
+  });
+  return handleResponse<{ paymentUrl: string }>(res);
+}
+
+/** DELETE /api/Product/{productId} — delete own listing. */
+export async function deleteProduct(productId: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/Product/${productId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  await handleEmptyResponse(res);
 }
 
 // ─── Create endpoints ──────────────────────────────────────────────────────

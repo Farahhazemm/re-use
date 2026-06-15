@@ -106,7 +106,9 @@ public static class UserSeeder
 
         foreach (var seed in Users)
         {
-            var identityUser = await userManager.FindByEmailAsync(seed.Email);
+            var identityUser = await userManager.FindByEmailAsync(seed.Email)
+                             ?? await userManager.FindByNameAsync(seed.UserName);
+
             if (identityUser == null)
             {
                 identityUser = new ApplicationUser

@@ -5,7 +5,7 @@ import { loadCategories, type Category } from "./data/categories";
 import { Pagination } from "./ui/Pagination";
 import { FavoriteButton } from "./FavoriteButton";
 import { listProducts } from "../services/productService";
-import type { ProductResponse, ProductCondition } from "../services/productService";
+import type { ProductResponse, ProductCondition, ProductType } from "../services/productService";
 
 const CONDITION_LABELS: Record<string, string> = {
   New: "New",
@@ -34,33 +34,112 @@ interface FilterState {
   maxPrice: string;
   conditions: ProductCondition[];
   categories: string[];
+  types: ProductType[];
   location: string;
   searchQuery: string;
 }
+
+type ViewMode = "grid" | "list";
+type SortOption = "relevance" | "newest" | "price-low" | "price-high";
 
 const EMPTY_FILTERS: FilterState = {
   minPrice: "",
   maxPrice: "",
   conditions: [],
   categories: [],
+  types: [],
   location: "",
   searchQuery: "",
 };
 
+const PRODUCT_TYPES: ProductType[] = ["Regular", "Wanted", "Swap"];
+const PRODUCT_CONDITIONS: ProductCondition[] = ["New", "LikeNew", "Used", "Broken"];
+
+function getValidValues<T extends string>(
+  searchParams: URLSearchParams,
+  key: string,
+  validValues: readonly T[]
+): T[] {
+  const valid = new Set<string>(validValues);
+  return searchParams.getAll(key).filter((value): value is T => valid.has(value));
+}
+
+function getUrlState(searchParams: URLSearchParams) {
+  const searchQuery = searchParams.get("search") || "";
+  const pageParam = Number(searchParams.get("page"));
+  const page = Number.isInteger(pageParam) && pageParam > 0 ? pageParam : 1;
+  const viewParam = searchParams.get("view");
+  const sortParam = searchParams.get("sort");
+
+  const sortBy: SortOption =
+    sortParam === "price-low" || sortParam === "price-high" || sortParam === "newest"
+      ? sortParam
+      : sortParam === "relevance" && searchQuery.trim()
+        ? "relevance"
+        : searchQuery.trim()
+          ? "relevance"
+          : "newest";
+
+  return {
+    filters: {
+      minPrice: searchParams.get("minPrice") || "",
+      maxPrice: searchParams.get("maxPrice") || "",
+      conditions: getValidValues(searchParams, "conditions", PRODUCT_CONDITIONS),
+      categories: searchParams.getAll("categoryIds").filter(Boolean),
+      types: getValidValues(searchParams, "types", PRODUCT_TYPES),
+      location: searchParams.get("location") || "",
+      searchQuery,
+    },
+    page,
+    viewMode: viewParam === "list" ? "list" : ("grid" as ViewMode),
+    sortBy,
+  };
+}
+
+function writeUrlState(
+  setSearchParams: ReturnType<typeof useSearchParams>[1],
+  filters: FilterState,
+  sortBy: SortOption,
+  viewMode: ViewMode,
+  page: number,
+  replace = false
+) {
+  const next = new URLSearchParams();
+  const searchQuery = filters.searchQuery.trim();
+  const effectiveSortBy = !searchQuery && sortBy === "relevance" ? "newest" : sortBy;
+
+  if (searchQuery) next.set("search", searchQuery);
+  if (page > 1) next.set("page", String(page));
+  if (effectiveSortBy !== (searchQuery ? "relevance" : "newest")) {
+    next.set("sort", effectiveSortBy);
+  }
+  if (viewMode !== "grid") next.set("view", viewMode);
+  if (filters.minPrice) next.set("minPrice", filters.minPrice);
+  if (filters.maxPrice) next.set("maxPrice", filters.maxPrice);
+  filters.categories.forEach((id) => next.append("categoryIds", id));
+  filters.types.forEach((type) => next.append("types", type));
+  filters.conditions.forEach((condition) => next.append("conditions", condition));
+  if (filters.location.trim()) next.set("location", filters.location.trim());
+
+  setSearchParams(next, { replace });
+}
+
 export function ProductsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialSearch = searchParams.get("search") || "";
+  const urlState = getUrlState(searchParams);
 
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [sortBy, setSortBy] = useState<"newest" | "price-low" | "price-high">("newest");
+  const appliedFilters = urlState.filters;
+  const sortBy = urlState.sortBy;
+  const viewMode = urlState.viewMode;
+  const currentPage = urlState.page;
+
   const [showFilters, setShowFilters] = useState(true);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
   const [products, setProducts] = useState<ProductResponse[]>([]);
   const [totalRecords, setTotalRecords] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [currentPage, setCurrentPage] = useState(1);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
 
@@ -78,24 +157,20 @@ export function ProductsPage() {
     };
   }, []);
 
-  const [draftFilters, setDraftFilters] = useState<FilterState>({
-    ...EMPTY_FILTERS,
-    searchQuery: initialSearch,
-  });
-  const [appliedFilters, setAppliedFilters] = useState<FilterState>({
-    ...EMPTY_FILTERS,
-    searchQuery: initialSearch,
-  });
+  const [draftFilters, setDraftFilters] = useState<FilterState>(urlState.filters);
+  const [prevSearchParams, setPrevSearchParams] = useState(searchParams.toString());
 
-  // Reset page to 1 when filters or sort changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [sortBy, appliedFilters]);
+  if (searchParams.toString() !== prevSearchParams) {
+    setPrevSearchParams(searchParams.toString());
+    setDraftFilters(urlState.filters);
+    setProductsLoading(true);
+  }
 
   useEffect(() => {
     let cancelled = false;
 
     const sortMap = {
+      relevance: { sortBy: "Relevance" as const, sortDirection: "Desc" as const },
       newest: { sortBy: "Newest" as const, sortDirection: "Desc" as const },
       "price-low": { sortBy: "Price" as const, sortDirection: "Asc" as const },
       "price-high": { sortBy: "Price" as const, sortDirection: "Desc" as const },
@@ -106,6 +181,7 @@ export function ProductsPage() {
     const conditions = appliedFilters.conditions.length > 0 ? appliedFilters.conditions : undefined;
     const categoryIds =
       appliedFilters.categories.length > 0 ? appliedFilters.categories : undefined;
+    const types = appliedFilters.types.length > 0 ? appliedFilters.types : undefined;
     const location = appliedFilters.location.trim() || undefined;
     const searchQuery = appliedFilters.searchQuery.trim() || undefined;
 
@@ -117,6 +193,7 @@ export function ProductsPage() {
       maxPrice,
       conditions,
       categoryIds,
+      types,
       location,
       searchTerm: searchQuery,
     })
@@ -141,42 +218,23 @@ export function ProductsPage() {
     };
   }, [sortBy, appliedFilters, currentPage]);
 
-  // Update URL search params when applied search query changes
-  useEffect(() => {
-    if (appliedFilters.searchQuery) {
-      setSearchParams({ search: appliedFilters.searchQuery }, { replace: true });
-    } else {
-      setSearchParams({}, { replace: true });
-    }
-  }, [appliedFilters.searchQuery, setSearchParams]);
-
-  // Sync state if URL changes externally (e.g. back button or external navigation)
-  useEffect(() => {
-    const currentSearch = searchParams.get("search") || "";
-    if (currentSearch !== appliedFilters.searchQuery) {
-      setAppliedFilters((prev) => ({ ...prev, searchQuery: currentSearch }));
-      setDraftFilters((prev) => ({ ...prev, searchQuery: currentSearch }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-
   // Live search debounce
   useEffect(() => {
     const timer = setTimeout(() => {
-      setAppliedFilters((prev) => {
-        if (prev.searchQuery !== draftFilters.searchQuery) {
-          return { ...prev, searchQuery: draftFilters.searchQuery };
-        }
-        return prev;
-      });
+      if (appliedFilters.searchQuery !== draftFilters.searchQuery) {
+        const nextSort = draftFilters.searchQuery.trim() ? "relevance" : "newest";
+        writeUrlState(setSearchParams, draftFilters, nextSort, viewMode, 1, true);
+      }
     }, 250);
     return () => clearTimeout(timer);
-  }, [draftFilters.searchQuery]);
+  }, [appliedFilters.searchQuery, draftFilters, setSearchParams, viewMode]);
 
-  const applyFilters = () => setAppliedFilters(draftFilters);
+  const applyFilters = () => {
+    const nextSort = draftFilters.searchQuery.trim() && sortBy === "newest" ? "relevance" : sortBy;
+    writeUrlState(setSearchParams, draftFilters, nextSort, viewMode, 1);
+  };
   const resetFilters = () => {
-    setDraftFilters(EMPTY_FILTERS);
-    setAppliedFilters(EMPTY_FILTERS);
+    writeUrlState(setSearchParams, EMPTY_FILTERS, "newest", viewMode, 1);
   };
   const toggleCondition = (cond: ProductCondition) => {
     setDraftFilters((prev) => ({
@@ -194,6 +252,28 @@ export function ProductsPage() {
         ? prev.categories.filter((c) => c !== categoryId)
         : [...prev.categories, categoryId],
     }));
+  };
+
+  const toggleType = (type: ProductType) => {
+    setDraftFilters((prev) => ({
+      ...prev,
+      types: prev.types.includes(type)
+        ? prev.types.filter((current) => current !== type)
+        : [...prev.types, type],
+    }));
+  };
+
+  const updateSort = (nextSort: SortOption) => {
+    writeUrlState(setSearchParams, appliedFilters, nextSort, viewMode, 1);
+  };
+
+  const updateViewMode = (nextViewMode: ViewMode) => {
+    writeUrlState(setSearchParams, appliedFilters, sortBy, nextViewMode, currentPage, true);
+  };
+
+  const updatePage = (page: number) => {
+    writeUrlState(setSearchParams, appliedFilters, sortBy, viewMode, page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const breadcrumbs = [
@@ -302,9 +382,10 @@ export function ProductsPage() {
 
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                onChange={(e) => updateSort(e.target.value as SortOption)}
                 className="px-2 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-gray-300 bg-white text-xs sm:text-sm font-medium text-gray-700 hover:border-gray-400 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#7C3AED]/30"
               >
+                {appliedFilters.searchQuery.trim() && <option value="relevance">Best Match</option>}
                 <option value="newest">Newest First</option>
                 <option value="price-low">Price: Low to High</option>
                 <option value="price-high">Price: High to Low</option>
@@ -317,7 +398,7 @@ export function ProductsPage() {
               </span>
               <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                 <button
-                  onClick={() => setViewMode("grid")}
+                  onClick={() => updateViewMode("grid")}
                   className={`p-1.5 sm:p-2 rounded transition-all duration-200 ${
                     viewMode === "grid"
                       ? "bg-white text-[#7C3AED] shadow-sm"
@@ -327,7 +408,7 @@ export function ProductsPage() {
                   <Grid3x3 className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => setViewMode("list")}
+                  onClick={() => updateViewMode("list")}
                   className={`p-1.5 sm:p-2 rounded transition-all duration-200 ${
                     viewMode === "list"
                       ? "bg-white text-[#7C3AED] shadow-sm"
@@ -367,6 +448,7 @@ export function ProductsPage() {
                 onChange={setDraftFilters}
                 onToggleCondition={toggleCondition}
                 onToggleCategory={toggleCategory}
+                onToggleType={toggleType}
               />
 
               <div className="flex gap-3 pt-4 border-t border-gray-200 mt-4">
@@ -403,6 +485,7 @@ export function ProductsPage() {
                   onChange={setDraftFilters}
                   onToggleCondition={toggleCondition}
                   onToggleCategory={toggleCategory}
+                  onToggleType={toggleType}
                 />
 
                 <div className="flex gap-3 pt-4 border-t border-gray-200">
@@ -464,10 +547,7 @@ export function ProductsPage() {
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
-                  onPageChange={(page) => {
-                    setCurrentPage(page);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
+                  onPageChange={updatePage}
                 />
               </>
             ) : (
@@ -484,10 +564,7 @@ export function ProductsPage() {
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
-                  onPageChange={(page) => {
-                    setCurrentPage(page);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
+                  onPageChange={updatePage}
                 />
               </>
             )}
@@ -503,14 +580,15 @@ function FilterSidebar({
   onChange,
   onToggleCondition,
   onToggleCategory,
+  onToggleType,
 }: {
   filters: FilterState;
   availableCategories: Category[];
   onChange: (next: FilterState) => void;
   onToggleCondition: (cond: ProductCondition) => void;
   onToggleCategory: (categoryId: string) => void;
+  onToggleType: (type: ProductType) => void;
 }) {
-  const conditions: ProductCondition[] = ["New", "LikeNew", "Used", "Broken"];
   return (
     <>
       <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
@@ -554,9 +632,26 @@ function FilterSidebar({
       </div>
 
       <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-3">Listing Type</label>
+        <div className="space-y-2">
+          {PRODUCT_TYPES.map((type) => (
+            <label key={type} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={filters.types.includes(type)}
+                onChange={() => onToggleType(type)}
+                className="rounded text-[#7C3AED] focus:ring-[#7C3AED] w-4 h-4"
+              />
+              <span className="text-sm text-gray-700">{type}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-3">Condition</label>
         <div className="space-y-2">
-          {conditions.map((condition) => (
+          {PRODUCT_CONDITIONS.map((condition) => (
             <label key={condition} className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"

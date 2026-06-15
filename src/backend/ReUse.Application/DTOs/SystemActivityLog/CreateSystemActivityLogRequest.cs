@@ -7,6 +7,9 @@ namespace ReUse.Application.DTOs.SystemActivityLog;
 public class CreateSystemActivityLogRequest
 {
     public Guid? ActorUserId { get; set; }
+    public string? ActorName { get; set; }
+
+    public string? ActorEmail { get; set; }
     public LogActionType ActionType { get; set; }
     public LogCategory Category { get; set; }
     public string? EntityType { get; set; }

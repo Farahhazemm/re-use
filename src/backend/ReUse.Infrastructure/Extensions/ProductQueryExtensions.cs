@@ -8,7 +8,7 @@ public static class ProductQueryExtensions
 {
     // Search
 
-    /// Case-insensitive search across Title
+    /// Case-insensitive search across product, category, seller, location, and swap-request fields.
     public static IQueryable<Product> Search(
         this IQueryable<Product> query,
         string? searchTerm)
@@ -17,7 +17,16 @@ public static class ProductQueryExtensions
             return query;
 
         var term = searchTerm.Trim().ToLower();
-        return query.Where(p => p.Title.ToLower().Contains(term));
+        return query.Where(p =>
+            p.Title.ToLower().Contains(term) ||
+            p.Description.ToLower().Contains(term) ||
+            p.Category.Name.ToLower().Contains(term) ||
+            (p.Category.Description != null && p.Category.Description.ToLower().Contains(term)) ||
+            (p is SwapProduct &&
+                (((SwapProduct)p).WantedItemTitle.ToLower().Contains(term) ||
+                 (((SwapProduct)p).WantedItemDescription != null &&
+                  ((SwapProduct)p).WantedItemDescription!.ToLower().Contains(term))))
+        );
     }
 
     // Filters
@@ -98,8 +107,28 @@ public static class ProductQueryExtensions
     public static IQueryable<Product> ApplySort(
         this IQueryable<Product> query,
         ProductSortBy sortBy,
-        SortDirection direction)
+        SortDirection direction,
+        string? searchTerm = null)
     {
+        if (sortBy == ProductSortBy.Relevance && !string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.Trim().ToLower();
+
+            return query
+                .OrderByDescending(p => p.Title.ToLower() == term)
+                .ThenByDescending(p => p.Title.ToLower().StartsWith(term))
+                .ThenByDescending(p => p.Title.ToLower().Contains(term))
+                .ThenByDescending(p => p.Category.Name.ToLower().Contains(term))
+                .ThenByDescending(p => p.Description.ToLower().Contains(term))
+                .ThenByDescending(p =>
+                    p is SwapProduct &&
+                    (((SwapProduct)p).WantedItemTitle.ToLower().Contains(term) ||
+                     (((SwapProduct)p).WantedItemDescription != null &&
+                      ((SwapProduct)p).WantedItemDescription!.ToLower().Contains(term))))
+                .ThenByDescending(p => p.IsPremium)
+                .ThenByDescending(p => p.CreatedAt);
+        }
+
         return (sortBy, direction) switch
         {
             (ProductSortBy.Price, SortDirection.Asc) =>

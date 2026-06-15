@@ -29,9 +29,8 @@ public interface IUnitOfWork : IDisposable
     IActivityRepository activities { get; }
 
     IFeedbackRepository Feedback { get; }
-
     ISystemActivityLogRepository SystemActivityLogs { get; }
-
+    IReportRepository Reports { get; }
     Task<int> SaveChangesAsync();
     void Dispose();
 }

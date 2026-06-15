@@ -96,6 +96,6 @@ public class PasswordResetService : IPasswordResetService
         await _cache.RemoveAsync(key);
 
         // Log after successful reset — email masked for PII protection.
-        _ = _activityLog.LogPasswordResetAsync(email);
+        await _activityLog.LogPasswordResetAsync(email);
     }
 }

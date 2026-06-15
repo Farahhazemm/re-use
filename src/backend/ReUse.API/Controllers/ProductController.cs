@@ -221,7 +221,12 @@ public class ProductController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> PremiumCallback([FromBody] PaymobCallbackRequest payload)
     {
-        string receivedHmac = Request.Query["hmac"];
+        string? receivedHmac = Request.Query["hmac"];
+        if (string.IsNullOrEmpty(receivedHmac))
+        {
+            return BadRequest("HMAC is required");
+        }
+
         await _promotionService.PayCallback(receivedHmac, payload);
         return Ok();
     }

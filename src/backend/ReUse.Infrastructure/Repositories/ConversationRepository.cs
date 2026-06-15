@@ -133,4 +133,11 @@ public class ConversationRepository : BaseRepository<Conversation>, IConversatio
                 c.LastActivityAt < cutoff)
             .ToListAsync();
     }
+
+    public async Task DeleteByUserIdAsync(Guid userId)
+    {
+        await _context.Conversations
+            .Where(c => c.BuyerId == userId || c.SellerId == userId)
+            .ExecuteDeleteAsync();
+    }
 }

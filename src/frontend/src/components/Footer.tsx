@@ -99,7 +99,7 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="/terms"
+                  href="/legal"
                   className="text-[15px] text-gray-300 hover:text-white hover:underline transition-colors duration-200"
                 >
                   Policy Center

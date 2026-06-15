@@ -24,7 +24,6 @@ public class SystemActivityLogRepository : BaseRepository<SystemActivityLog>, IS
     {
         var query = _context.SystemActivityLogs
             .AsNoTracking()
-            .Include(l => l.ActorUser)
             .AsQueryable();
 
         if (filterParams.ActorUserId.HasValue)
@@ -55,6 +54,7 @@ public class SystemActivityLogRepository : BaseRepository<SystemActivityLog>, IS
             query = query.Where(l => l.CreatedAt <= filterParams.CreatedTo.Value);
 
         var keyword = filterParams.Search ?? filterParams.DescriptionSearch;
+
         if (!string.IsNullOrWhiteSpace(keyword))
         {
             query = query.Where(l =>
@@ -66,14 +66,16 @@ public class SystemActivityLogRepository : BaseRepository<SystemActivityLog>, IS
         query = (filterParams.SortBy?.ToLowerInvariant()) switch
         {
             "oldest" => query.OrderBy(l => l.CreatedAt).ThenBy(l => l.Id),
+
             "severity" => query
-                           .OrderByDescending(l =>
-                           l.Severity == LogSeverity.Critical ? 3 :
-                           l.Severity == LogSeverity.Error ? 2 :
-                           l.Severity == LogSeverity.Warning ? 1 : 0)
-                            .ThenByDescending(l => l.CreatedAt)
-                            .ThenByDescending(l => l.Id),
-            _ => query.OrderByDescending(l => l.CreatedAt).ThenByDescending(l => l.Id)  // "newest" default
+                .OrderByDescending(l =>
+                    l.Severity == LogSeverity.Critical ? 3 :
+                    l.Severity == LogSeverity.Error ? 2 :
+                    l.Severity == LogSeverity.Warning ? 1 : 0)
+                .ThenByDescending(l => l.CreatedAt)
+                .ThenByDescending(l => l.Id),
+
+            _ => query.OrderByDescending(l => l.CreatedAt).ThenByDescending(l => l.Id)
         };
 
         return await query
@@ -81,7 +83,10 @@ public class SystemActivityLogRepository : BaseRepository<SystemActivityLog>, IS
             {
                 Id = l.Id,
                 ActorUserId = l.ActorUserId,
-                ActorName = l.ActorUser != null ? l.ActorUser.FullName : null,
+
+                ActorName = l.ActorName,
+                ActorEmail = l.ActorEmail,
+
                 ActionType = l.ActionType,
                 Category = l.Category,
                 EntityType = l.EntityType,
@@ -94,14 +99,15 @@ public class SystemActivityLogRepository : BaseRepository<SystemActivityLog>, IS
                 Metadata = l.Metadata,
                 CreatedAt = l.CreatedAt
             })
-            .ToPagedListAsync(filterParams.Pagination.PageNumber, filterParams.Pagination.PageSize);
+            .ToPagedListAsync(
+                filterParams.Pagination.PageNumber,
+                filterParams.Pagination.PageSize);
     }
 
     public async Task<SystemActivityLog?> GetByIdDetailAsync(Guid id)
     {
         return await _context.SystemActivityLogs
             .AsNoTracking()
-            .Include(l => l.ActorUser)
             .FirstOrDefaultAsync(l => l.Id == id);
     }
 }

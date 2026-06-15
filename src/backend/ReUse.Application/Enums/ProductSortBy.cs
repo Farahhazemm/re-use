@@ -10,5 +10,6 @@ public enum ProductSortBy
 {
     Newest,
     Price,
-    Recommended
+    Recommended,
+    Relevance
 }

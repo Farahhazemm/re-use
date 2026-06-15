@@ -2,14 +2,12 @@
 
 public enum LogActionType
 {
-    // Authentication
     Login,
     Logout,
     LoginFailed,
     PasswordReset,
     TokenRefresh,
 
-    // User Management
     UserCreated,
     UserUpdated,
     UserDeactivated,
@@ -18,7 +16,6 @@ public enum LogActionType
     RoleAssigned,
     RoleRevoked,
 
-    // Content Moderation
     ProductApproved,
     ProductRejected,
     ProductDeleted,
@@ -28,10 +25,11 @@ public enum LogActionType
     CategoryUpdated,
     CategoryDeleted,
 
-    // System / Configuration
+    ReportCreated,
+    ReportReviewed,
+
     SettingUpdated,
     DataExported,
 
-    // General / fallback
     Other
 }

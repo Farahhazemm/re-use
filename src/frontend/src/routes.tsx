@@ -21,36 +21,77 @@ import CreateProductPageWrapper from "./pages/CreateProductPageWrapper";
 import ProductManagementPageWrapper from "./pages/ProductManagementPageWrapper";
 import AccountSettingsPageWrapper from "./pages/AccountSettingsPageWrapper";
 import UserManagementPageWrapper from "./pages/UserManagementPageWrapper";
+import NotFoundPage from "./pages/NotFoundPage";
+import GlobalErrorPage from "./pages/GlobalErrorPage";
+import LegalPage from "./pages/LegalPage";
+import SearchRedirectPage from "./pages/SearchRedirectPage";
+
+const routeErrorElement = <GlobalErrorPage />;
+import MyProductsPageWrapper from "./pages/MyProductsPageWrapper";
+import ProductDetailsPageWrapper from "./pages/ProductDetailsPageWrapper";
 
 export const router = createBrowserRouter([
   // Public
   {
     path: "/",
     Component: HomePage,
+    errorElement: routeErrorElement,
   },
   {
     path: "/products",
     Component: ProductsPageWrapper,
+    errorElement: routeErrorElement,
+  },
+  {
+    path: "/search",
+    Component: SearchRedirectPage,
+    errorElement: routeErrorElement,
+  },
+  {
+    path: "/product/:productId",
+    Component: ProductDetailsPageWrapper,
   },
   {
     path: "/categories",
     Component: CategoriesPageWrapper,
+    errorElement: routeErrorElement,
   },
   {
     path: "/category/:categoryId",
     Component: CategoryProductsPageWrapper,
+    errorElement: routeErrorElement,
   },
   {
     path: "/unauthorized",
     Component: UnauthorizedPage,
+    errorElement: routeErrorElement,
   },
   {
     path: "/profile/:userId",
     Component: PublicUserProfilePageWrapper,
+    errorElement: routeErrorElement,
+  },
+  {
+    path: "/error",
+    Component: GlobalErrorPage,
+  },
+  {
+    path: "/legal",
+    Component: LegalPage,
+    errorElement: routeErrorElement,
+  },
+  {
+    path: "/terms",
+    element: <Navigate to="/legal?tab=terms" replace />,
+  },
+  {
+    path: "/privacy",
+    element: <Navigate to="/legal?tab=privacy" replace />,
   },
   // Only for NON-auth users
   {
     element: <GuestRoute />,
+    errorElement: routeErrorElement,
     children: [
       {
         path: "/login",
@@ -81,6 +122,7 @@ export const router = createBrowserRouter([
   // Protected (admin)
   {
     element: <ProtectedRoute allowedRoles={["Admin"]} />,
+    errorElement: routeErrorElement,
     children: [
       {
         path: "/admin/categories",
@@ -99,6 +141,7 @@ export const router = createBrowserRouter([
   // Protected
   {
     element: <ProtectedRoute />,
+    errorElement: routeErrorElement,
     children: [
       {
         path: "/followers-following",
@@ -124,6 +167,14 @@ export const router = createBrowserRouter([
         path: "/admin/settings",
         element: <Navigate to="/account-settings" replace />,
       },
+      {
+        path: "/my-products",
+        Component: MyProductsPageWrapper,
+      },
     ],
+  },
+  {
+    path: "*",
+    Component: NotFoundPage,
   },
 ]);

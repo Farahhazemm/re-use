@@ -33,7 +33,9 @@ public static class IdentitySeeder
             await roleManager.CreateAsync(new IdentityRole(adminRole));
         }
 
-        var user = await userManager.FindByEmailAsync(adminEmail);
+        var user = await userManager.FindByEmailAsync(adminEmail)
+                   ?? await userManager.FindByNameAsync(adminUserName!);
+
         if (user == null)
         {
             user = new ApplicationUser
@@ -44,7 +46,7 @@ public static class IdentitySeeder
                 LockoutEnabled = true
             };
 
-            var result = await userManager.CreateAsync(user, adminPassword);
+            var result = await userManager.CreateAsync(user, adminPassword!);
             if (!result.Succeeded)
                 throw new Exception(string.Join(", ", result.Errors.Select(e => e.Description)));
         }

@@ -276,7 +276,7 @@ public class AdminUserService : IAdminUserService
 
         await _cache.RemoveAsync($"user:active:{userId}");
 
-        _ = _activityLog.LogUserBlockedAsync(currentAdminId, userId);
+        await _activityLog.LogUserBlockedAsync(currentAdminId, userId);
 
         var identityIds = new List<string> { domainUser.IdentityUserId };
         var rolesMap = await _identityUserRepo.GetRolesByUserIdsAsync(identityIds);
@@ -313,7 +313,7 @@ public class AdminUserService : IAdminUserService
 
         await _cache.RemoveAsync($"user:active:{userId}");
 
-        _ = _activityLog.LogUserUnblockedAsync(currentAdminId, userId);
+        await _activityLog.LogUserUnblockedAsync(currentAdminId, userId);
 
         var identityIds = new List<string> { domainUser.IdentityUserId };
         var rolesMap = await _identityUserRepo.GetRolesByUserIdsAsync(identityIds);

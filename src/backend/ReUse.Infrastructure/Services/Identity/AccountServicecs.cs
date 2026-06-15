@@ -13,9 +13,6 @@ using ReUse.Infrastructure.Interfaces.Services;
 
 namespace ReUse.Infrastructure.Services.Identity;
 
-// TODO: Inject IRequestContext once available so IpAddress/UserAgent are automatically resolved
-//       and passed to logging calls without requiring callers to supply them.
-
 public class AccountService : IAccountService
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -51,10 +48,9 @@ public class AccountService : IAccountService
             throw new IdentityOperationException(errors);
         }
 
-        // Resolve business user id for logging
         var domainUser = await _unitOfWork.User.GetByIdentityIdAsync(userId);
         if (domainUser is not null)
-            _ = _activityLog.LogPasswordChangedAsync(domainUser.Id);
+            await _activityLog.LogPasswordChangedAsync(domainUser.Id);
     }
 
     public async Task DeactivateAccountAsync(Guid userId, DeactivateAccountRequest request)
@@ -118,6 +114,13 @@ public class AccountService : IAccountService
         if (!passwordValid)
             throw new ForbiddenException();
 
+        var actorId = user.Id;
+        var actorEmail = identityUser.Email ?? string.Empty;
+        var actorName = $"{user.FullName}".Trim();
+
+        await _activityLog.LogAccountDeletedAsync(actorId, actorEmail, actorName);
+
+        await _unitOfWork.Conversation.DeleteByUserIdAsync(userId);
         await _unitOfWork.Product.DeleteByUserIdAsync(userId);
         await _unitOfWork.Follow.DeleteByUserIdAsync(userId);
         await _unitOfWork.Comments.DeleteByUserIdAsync(userId);
@@ -126,6 +129,7 @@ public class AccountService : IAccountService
         await _unitOfWork.SaveChangesAsync();
 
         var result = await _userManager.DeleteAsync(identityUser);
+
         if (!result.Succeeded)
         {
             var errors = result.Errors.Select(e => e.Description);
@@ -134,6 +138,5 @@ public class AccountService : IAccountService
 
         await _cache.RemoveAsync($"user:active:{userId}");
 
-        _ = _activityLog.LogAccountDeletedAsync(userId);
     }
 }

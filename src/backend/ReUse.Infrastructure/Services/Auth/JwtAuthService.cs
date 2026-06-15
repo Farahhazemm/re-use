@@ -69,11 +69,11 @@ public class JwtAuthService : IAuthService
 
             if (lockoutEnd == DateTimeOffset.MaxValue)
             {
-                _ = _activityLog.LogLoginFailedAsync(request.Email, reason: "Account blocked by admin.");
+                await _activityLog.LogLoginFailedAsync(request.Email, reason: "Account blocked by admin.");
                 throw new UserBlockedException();
             }
 
-            _ = _activityLog.LogLoginFailedAsync(request.Email, reason: "Account temporarily locked out.");
+            await _activityLog.LogLoginFailedAsync(request.Email, reason: "Account temporarily locked out.");
             throw new UserLockedOutException();
         }
 
@@ -81,19 +81,19 @@ public class JwtAuthService : IAuthService
 
         if (signInResult.IsLockedOut)
         {
-            _ = _activityLog.LogLoginFailedAsync(request.Email, reason: "Locked out after failed attempts.");
+            await _activityLog.LogLoginFailedAsync(request.Email, reason: "Locked out after failed attempts.");
             throw new UserLockedOutException();
         }
 
         if (!signInResult.Succeeded)
         {
-            _ = _activityLog.LogLoginFailedAsync(request.Email, reason: "Invalid credentials.");
+            await _activityLog.LogLoginFailedAsync(request.Email, reason: "Invalid credentials.");
             throw new InvalidCredentialsException();
         }
 
         if (!user.EmailConfirmed)
         {
-            _ = _activityLog.LogLoginFailedAsync(request.Email, reason: "Email not confirmed.");
+            await _activityLog.LogLoginFailedAsync(request.Email, reason: "Email not confirmed.");
             throw new EmailNotConfirmedException();
         }
 
@@ -105,7 +105,7 @@ public class JwtAuthService : IAuthService
         var jwtToken = await _tokenService.GenerateJwtAsync(user);
         var refreshToken = await _tokenService.CreateRefreshTokenAsync(user);
 
-        _ = _activityLog.LogLoginSuccessAsync(domainUser.Id);
+        await _activityLog.LogLoginSuccessAsync(domainUser.Id);
 
         return new LoginResponse(
             user.Email!,

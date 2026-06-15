@@ -57,7 +57,7 @@ public class AdminProductsController : ControllerBase
     {
         var adminId = User.GetBusinessId();
         await _productService.DeleteProductAsync(productId, Guid.Empty, isAdmin: true);
-        _ = _activityLog.LogProductDeletedByAdminAsync(adminId, productId);
+        await _activityLog.LogProductDeletedByAdminAsync(adminId, productId);
         return Ok(new { message = "Product deleted successfully" });
     }
 
@@ -108,7 +108,7 @@ public class AdminProductsController : ControllerBase
     {
         var adminId = User.GetBusinessId();
         await _productService.ChangeProductStatusByAdminAsync(productId, request.Status);
-        _ = _activityLog.LogProductModerationAsync(adminId, productId, request.Status);
+        await _activityLog.LogProductModerationAsync(adminId, productId, request.Status);
         return NoContent();
     }
 
@@ -121,7 +121,7 @@ public class AdminProductsController : ControllerBase
     {
         var adminId = User.GetBusinessId();
         await _productService.RestoreProductByAdminAsync(productId);
-        _ = _activityLog.LogProductModerationAsync(adminId, productId, Domain.Enums.ProductStatus.Active, reason: "Restored by admin.");
+        await _activityLog.LogProductModerationAsync(adminId, productId, Domain.Enums.ProductStatus.Active, reason: "Restored by admin.");
         return NoContent();
     }
 
@@ -134,7 +134,7 @@ public class AdminProductsController : ControllerBase
     {
         var adminId = User.GetBusinessId();
         await _promotionService.SetPremiumAsync(productId, request.DurationDays);
-        _ = _activityLog.LogPremiumGrantedByAdminAsync(adminId, productId, request.DurationDays);
+        await _activityLog.LogPremiumGrantedByAdminAsync(adminId, productId, request.DurationDays);
         return NoContent();
     }
 
@@ -146,7 +146,7 @@ public class AdminProductsController : ControllerBase
     {
         var adminId = User.GetBusinessId();
         await _promotionService.RemovePremiumAsync(productId);
-        _ = _activityLog.LogPremiumRemovedByAdminAsync(adminId, productId);
+        await _activityLog.LogPremiumRemovedByAdminAsync(adminId, productId);
         return NoContent();
     }
 }

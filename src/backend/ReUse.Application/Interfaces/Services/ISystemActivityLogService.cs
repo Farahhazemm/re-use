@@ -13,16 +13,14 @@ public interface ISystemActivityLogService
 
     Task LogAsync(CreateSystemActivityLogRequest request);
 
-    // --- Auth helpers ---
     Task LogLoginSuccessAsync(Guid userId, string? ipAddress = null, string? userAgent = null);
     Task LogLoginFailedAsync(string email, string? ipAddress = null, string? userAgent = null, string? reason = null);
     Task LogPasswordChangedAsync(Guid userId, string? ipAddress = null, string? userAgent = null);
     Task LogPasswordResetAsync(string email, string? ipAddress = null, string? userAgent = null);
-    Task LogAccountDeletedAsync(Guid userId, string? ipAddress = null, string? userAgent = null);
+    Task LogAccountDeletedAsync(Guid userId, string actorEmail, string actorName, string? ipAddress = null, string? userAgent = null);
     Task LogUnauthorizedAccessAsync(string? ipAddress = null, string? userAgent = null, string? path = null);
     Task LogPermissionDeniedAsync(Guid? userId, string? ipAddress = null, string? userAgent = null, string? path = null);
 
-    // --- Admin action helpers ---
     Task LogUserBlockedAsync(Guid actorAdminId, Guid targetUserId);
     Task LogUserUnblockedAsync(Guid actorAdminId, Guid targetUserId);
     Task LogCategoryCreatedAsync(Guid actorAdminId, Guid categoryId, string categoryName);
@@ -34,11 +32,12 @@ public interface ISystemActivityLogService
     Task LogPremiumGrantedByAdminAsync(Guid actorAdminId, Guid productId, int durationDays);
     Task LogPremiumRemovedByAdminAsync(Guid actorAdminId, Guid productId);
 
-    // --- Payment helpers ---
     Task LogPaymentSuccessAsync(Guid userId, string transactionId, decimal amount);
     Task LogPaymentFailedAsync(Guid userId, string transactionId, decimal amount, string? reason = null);
 
-    // --- Exception / Infrastructure helpers ---
     Task LogUnhandledExceptionAsync(Exception ex, string? path = null, Guid? userId = null);
     Task LogInfrastructureFailureAsync(string component, string details, Guid? userId = null);
+
+    Task LogReportCreatedAsync(Guid reporterUserId, Guid reportId, ReportTargetType targetType, Guid targetId, ReportReason reason, string? actorName = null, string? actorEmail = null);
+    Task LogReportReviewedAsync(Guid reviewerAdminId, Guid reportId, ReportStatus newStatus, ReportTargetType targetType, Guid targetId, string? actorName = null, string? actorEmail = null);
 }

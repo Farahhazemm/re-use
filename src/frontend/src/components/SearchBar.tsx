@@ -72,7 +72,7 @@ export function SearchBar({ onSearch }: SearchBarProps) {
           setIsListening(false);
           const q = finalTranscriptRef.current;
           if (q.trim()) {
-            navigate(`/search?q=${encodeURIComponent(q)}`);
+            navigate(`/products?search=${encodeURIComponent(q)}`);
             onSearch?.(q);
           }
           finalTranscriptRef.current = "";
@@ -84,7 +84,7 @@ export function SearchBar({ onSearch }: SearchBarProps) {
   const handleSearch = (searchQuery: string) => {
     if (searchQuery.trim()) {
       onSearch?.(searchQuery);
-      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+      navigate(`/products?search=${encodeURIComponent(searchQuery)}`);
       setQuery(searchQuery);
     }
   };

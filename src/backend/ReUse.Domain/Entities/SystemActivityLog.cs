@@ -7,8 +7,10 @@ public class SystemActivityLog : BaseEntity
     // Null for system actions
     public Guid? ActorUserId { get; set; }
 
-    //may be null when the actor account has been deleted
+    // may be null when the actor account has been deleted
     public User? ActorUser { get; set; }
+    public string? ActorName { get; set; }
+    public string? ActorEmail { get; set; }
 
     public LogActionType ActionType { get; set; }
     public LogCategory Category { get; set; }

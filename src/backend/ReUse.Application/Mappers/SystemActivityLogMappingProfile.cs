@@ -15,8 +15,11 @@ public class SystemActivityLogMappingProfile : Profile
             .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
             .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore());
 
+
         CreateMap<SystemActivityLog, SystemActivityLogResponse>()
             .ForMember(dest => dest.ActorName,
-                opt => opt.MapFrom(src => src.ActorUser != null ? src.ActorUser.FullName : null));
+                opt => opt.MapFrom(src => src.ActorName))
+            .ForMember(dest => dest.ActorEmail,
+                opt => opt.MapFrom(src => src.ActorEmail));
     }
 }

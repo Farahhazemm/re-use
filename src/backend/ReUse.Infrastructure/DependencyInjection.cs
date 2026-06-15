@@ -68,6 +68,7 @@ public static class DependencyInjection
         services.AddScoped<IRecommendationRepository, RecommendationRepository>();
         services.AddScoped<IFeedbackRepository, FeedbackRepository>();
         services.AddScoped<ISystemActivityLogRepository, SystemActivityLogRepository>();
+        services.AddScoped<IReportRepository, ReportRepository>();
         #endregion
 
         #region Services

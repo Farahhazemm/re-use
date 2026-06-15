@@ -32,6 +32,8 @@ public class UnitOfWork : IUnitOfWork
         Conversation = new ConversationRepository(_context);
         Message = new MessageRepository(_context);
         SystemActivityLogs = new SystemActivityLogRepository(_context);
+
+        Reports = new ReportRepository(_context);
     }
     public IUserRepository User { get; private set; }
 
@@ -59,6 +61,8 @@ public class UnitOfWork : IUnitOfWork
     public IMessageRepository Message { get; private set; }
     public ISystemActivityLogRepository SystemActivityLogs { get; private set; }
 
+
+    public IReportRepository Reports { get; private set; }
 
 
     public async Task CommitTransactionAsync()
@@ -92,6 +96,7 @@ public class UnitOfWork : IUnitOfWork
     public void Dispose()
     {
         _context.Dispose();
+
     }
 
 }

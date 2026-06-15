@@ -142,7 +142,7 @@ public class CategoryService : ICategoryService
         await _unitOfWork.SaveChangesAsync();
 
         if (actorAdminId.HasValue)
-            _ = _activityLog.LogCategoryUpdatedAsync(actorAdminId.Value, category.Id, category.Name);
+            await _activityLog.LogCategoryUpdatedAsync(actorAdminId.Value, category.Id, category.Name);
 
         return _mapper.Map<CategoryResponse>(category);
     }
@@ -157,7 +157,7 @@ public class CategoryService : ICategoryService
         await _unitOfWork.SaveChangesAsync();
 
         if (actorAdminId.HasValue)
-            _ = _activityLog.LogCategoryDeletedAsync(actorAdminId.Value, id, name);
+            await _activityLog.LogCategoryDeletedAsync(actorAdminId.Value, id, name);
     }
 
     public async Task<CategoryResponse> UploadIconAsync(Guid id, IFormFile file)

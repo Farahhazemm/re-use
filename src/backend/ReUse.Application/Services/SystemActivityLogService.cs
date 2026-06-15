@@ -12,9 +12,6 @@ using ReUse.Domain.Enums;
 
 namespace ReUse.Application.Services;
 
-// TODO: Inject IRequestContext (wrapping IHttpContextAccessor) to resolve IpAddress, UserAgent,
-//       and ActorUserId automatically, removing the need for callers to pass them explicitly.
-
 public class SystemActivityLogService : ISystemActivityLogService
 {
     private readonly IUnitOfWork _unitOfWork;
@@ -50,6 +47,8 @@ public class SystemActivityLogService : ISystemActivityLogService
             var entity = new SystemActivityLog
             {
                 ActorUserId = request.ActorUserId,
+                ActorName = request.ActorName,
+                ActorEmail = request.ActorEmail,
                 ActionType = request.ActionType,
                 Category = request.Category,
                 EntityType = request.EntityType,
@@ -67,7 +66,6 @@ public class SystemActivityLogService : ISystemActivityLogService
         }
         catch (Exception ex)
         {
-            // Logging must NEVER break the main operation.
             _logger.LogError(ex,
                 "Failed to persist SystemActivityLog: Action={ActionType} Category={Category} Actor={ActorUserId}",
                 request.ActionType, request.Category, request.ActorUserId);
@@ -81,20 +79,18 @@ public class SystemActivityLogService : ISystemActivityLogService
         return Truncate(redacted, 1000);
     }
 
-    //  helpers 
-
     public Task LogLoginSuccessAsync(Guid userId, string? ipAddress = null, string? userAgent = null)
-        => LogAsync(new CreateSystemActivityLogRequest
-        {
-            ActorUserId = userId,
-            ActionType = LogActionType.Login,
-            Category = LogCategory.Authentication,
-            Severity = LogSeverity.Info,
-            Status = LogStatus.Success,
-            Description = "User logged in successfully.",
-            IpAddress = ipAddress,
-            UserAgent = userAgent,
-        });
+       => LogAsync(new CreateSystemActivityLogRequest
+       {
+           ActorUserId = userId,
+           ActionType = LogActionType.Login,
+           Category = LogCategory.Authentication,
+           Severity = LogSeverity.Info,
+           Status = LogStatus.Success,
+           Description = "User logged in successfully.",
+           IpAddress = ipAddress,
+           UserAgent = userAgent,
+       });
 
     public Task LogLoginFailedAsync(string email, string? ipAddress = null, string? userAgent = null, string? reason = null)
         => LogAsync(new CreateSystemActivityLogRequest
@@ -134,17 +130,19 @@ public class SystemActivityLogService : ISystemActivityLogService
             UserAgent = userAgent,
         });
 
-    public Task LogAccountDeletedAsync(Guid userId, string? ipAddress = null, string? userAgent = null)
+    public Task LogAccountDeletedAsync(Guid userId, string actorEmail, string actorName, string? ipAddress = null, string? userAgent = null)
         => LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = userId,
+            ActorName = actorName,
+            ActorEmail = MaskEmail(actorEmail),
             ActionType = LogActionType.UserDeleted,
             Category = LogCategory.UserManagement,
             EntityType = "User",
             EntityId = userId.ToString(),
             Severity = LogSeverity.Warning,
             Status = LogStatus.Success,
-            Description = "User deleted their own account.",
+            Description = $"User deleted their own account. Id='{userId}' Name='{actorName}' Email='{MaskEmail(actorEmail)}'.",
             IpAddress = ipAddress,
             UserAgent = userAgent,
         });
@@ -173,8 +171,6 @@ public class SystemActivityLogService : ISystemActivityLogService
             IpAddress = ipAddress,
             UserAgent = userAgent,
         });
-
-    // Admin action helpers 
 
     public Task LogUserBlockedAsync(Guid actorAdminId, Guid targetUserId)
         => LogAsync(new CreateSystemActivityLogRequest
@@ -313,8 +309,6 @@ public class SystemActivityLogService : ISystemActivityLogService
             Description = $"Admin removed premium from product '{productId}'.",
         });
 
-    //Payment helpers 
-
     public Task LogPaymentSuccessAsync(Guid userId, string transactionId, decimal amount)
         => LogAsync(new CreateSystemActivityLogRequest
         {
@@ -326,7 +320,6 @@ public class SystemActivityLogService : ISystemActivityLogService
             Severity = LogSeverity.Info,
             Status = LogStatus.Success,
             Description = $"Payment succeeded. Transaction='{transactionId}' Amount={amount / 100m:F2} EGP.",
-            //  No card/sensitive data is ever stored here.
         });
 
     public Task LogPaymentFailedAsync(Guid userId, string transactionId, decimal amount, string? reason = null)
@@ -341,8 +334,6 @@ public class SystemActivityLogService : ISystemActivityLogService
             Status = LogStatus.Failure,
             Description = $"Payment failed. Transaction='{transactionId}' Amount={amount / 100m:F2} EGP.{(reason is null ? "" : $" Reason: {reason}")}",
         });
-
-    // Exception / infrastructure helpers 
 
     public Task LogUnhandledExceptionAsync(Exception ex, string? path = null, Guid? userId = null)
         => LogAsync(new CreateSystemActivityLogRequest
@@ -366,7 +357,35 @@ public class SystemActivityLogService : ISystemActivityLogService
             Description = $"Infrastructure failure in '{component}': {Truncate(details, 300)}",
         });
 
-    // Private helpers
+    public Task LogReportCreatedAsync(Guid reporterUserId, Guid reportId, ReportTargetType targetType, Guid targetId, ReportReason reason, string? actorName = null, string? actorEmail = null)
+        => LogAsync(new CreateSystemActivityLogRequest
+        {
+            ActorUserId = reporterUserId,
+            ActorName = actorName,
+            ActorEmail = actorEmail is null ? null : MaskEmail(actorEmail),
+            ActionType = LogActionType.ReportCreated,
+            Category = LogCategory.ContentModeration,
+            EntityType = "Report",
+            EntityId = reportId.ToString(),
+            Severity = LogSeverity.Warning,
+            Status = LogStatus.Success,
+            Description = $"User submitted a report on {targetType} '{targetId}'. Reason: {reason}.",
+        });
+
+    public Task LogReportReviewedAsync(Guid reviewerAdminId, Guid reportId, ReportStatus newStatus, ReportTargetType targetType, Guid targetId, string? actorName = null, string? actorEmail = null)
+        => LogAsync(new CreateSystemActivityLogRequest
+        {
+            ActorUserId = reviewerAdminId,
+            ActorName = actorName,
+            ActorEmail = actorEmail is null ? null : MaskEmail(actorEmail),
+            ActionType = LogActionType.ReportReviewed,
+            Category = LogCategory.ContentModeration,
+            EntityType = "Report",
+            EntityId = reportId.ToString(),
+            Severity = newStatus == ReportStatus.Resolved ? LogSeverity.Info : LogSeverity.Warning,
+            Status = LogStatus.Success,
+            Description = $"Admin reviewed report '{reportId}' on {targetType} '{targetId}'. Decision: {newStatus}.",
+        });
 
     private static string MaskEmail(string email)
     {

@@ -36,6 +36,7 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<SystemActivityLog> SystemActivityLogs { get; set; }
 
+    public DbSet<Report> Reports { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
