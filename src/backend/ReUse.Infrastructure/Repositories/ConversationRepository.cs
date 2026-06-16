@@ -136,8 +136,9 @@ public class ConversationRepository : BaseRepository<Conversation>, IConversatio
 
     public async Task DeleteByUserIdAsync(Guid userId)
     {
-        await _context.Conversations
-            .Where(c => c.BuyerId == userId || c.SellerId == userId)
-            .ExecuteDeleteAsync();
+        var conversations = await _context.Conversations
+       .Where(c => c.BuyerId == userId || c.SellerId == userId)
+       .ToListAsync();
+        _context.Conversations.RemoveRange(conversations);
     }
 }

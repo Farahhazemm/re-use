@@ -40,12 +40,17 @@ namespace ReUse.Infrastructure.Persistence.Migrations
                 name: "FK_reports_Users_ReporterUserId",
                 table: "reports");
 
+            migrationBuilder.Sql("""
+        DELETE FROM reports
+        WHERE "ReporterUserId" IS NULL;
+    """);
+
             migrationBuilder.AlterColumn<Guid>(
                 name: "ReporterUserId",
                 table: "reports",
                 type: "uuid",
                 nullable: false,
-                defaultValue: new Guid("00000000-0000-0000-0000-000000000000"),
+                defaultValue: Guid.Empty,
                 oldClrType: typeof(Guid),
                 oldType: "uuid",
                 oldNullable: true);
