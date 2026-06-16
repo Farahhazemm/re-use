@@ -79,23 +79,27 @@ public class SystemActivityLogService : ISystemActivityLogService
         return Truncate(redacted, 1000);
     }
 
-    public Task LogLoginSuccessAsync(Guid userId, string? ipAddress = null, string? userAgent = null)
-       => LogAsync(new CreateSystemActivityLogRequest
-       {
-           ActorUserId = userId,
-           ActionType = LogActionType.Login,
-           Category = LogCategory.Authentication,
-           Severity = LogSeverity.Info,
-           Status = LogStatus.Success,
-           Description = "User logged in successfully.",
-           IpAddress = ipAddress,
-           UserAgent = userAgent,
-       });
+    public async Task LogLoginSuccessAsync(Guid userId, string? ipAddress = null, string? userAgent = null)
+    {
+        var (name, email) = await ResolveActorAsync(userId);
+        await LogAsync(new CreateSystemActivityLogRequest
+        {
+            ActorUserId = userId,
+            ActorName = name,
+            ActorEmail = email is null ? null : MaskEmail(email),
+            ActionType = LogActionType.Login,
+            Category = LogCategory.Authentication,
+            Severity = LogSeverity.Info,
+            Status = LogStatus.Success,
+            Description = "User logged in successfully.",
+            IpAddress = ipAddress,
+            UserAgent = userAgent,
+        });
+    }
 
     public Task LogLoginFailedAsync(string email, string? ipAddress = null, string? userAgent = null, string? reason = null)
         => LogAsync(new CreateSystemActivityLogRequest
         {
-            // No ActorUserId — identity unknown on failure
             ActionType = LogActionType.LoginFailed,
             Category = LogCategory.Authentication,
             Severity = LogSeverity.Warning,
@@ -105,11 +109,15 @@ public class SystemActivityLogService : ISystemActivityLogService
             UserAgent = userAgent,
         });
 
-    public Task LogPasswordChangedAsync(Guid userId, string? ipAddress = null, string? userAgent = null)
-        => LogAsync(new CreateSystemActivityLogRequest
+    public async Task LogPasswordChangedAsync(Guid userId, string? ipAddress = null, string? userAgent = null)
+    {
+        var (name, email) = await ResolveActorAsync(userId);
+        await LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = userId,
-            ActionType = LogActionType.PasswordReset,
+            ActorName = name,
+            ActorEmail = email is null ? null : MaskEmail(email),
+            ActionType = LogActionType.PasswordChanged,
             Category = LogCategory.Authentication,
             Severity = LogSeverity.Info,
             Status = LogStatus.Success,
@@ -117,6 +125,7 @@ public class SystemActivityLogService : ISystemActivityLogService
             IpAddress = ipAddress,
             UserAgent = userAgent,
         });
+    }
 
     public Task LogPasswordResetAsync(string email, string? ipAddress = null, string? userAgent = null)
         => LogAsync(new CreateSystemActivityLogRequest
@@ -150,7 +159,7 @@ public class SystemActivityLogService : ISystemActivityLogService
     public Task LogUnauthorizedAccessAsync(string? ipAddress = null, string? userAgent = null, string? path = null)
         => LogAsync(new CreateSystemActivityLogRequest
         {
-            ActionType = LogActionType.Other,
+            ActionType = LogActionType.UnauthorizedAccess,
             Category = LogCategory.Security,
             Severity = LogSeverity.Warning,
             Status = LogStatus.Failure,
@@ -163,7 +172,7 @@ public class SystemActivityLogService : ISystemActivityLogService
         => LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = userId,
-            ActionType = LogActionType.Other,
+            ActionType = LogActionType.PermissionDenied,
             Category = LogCategory.Security,
             Severity = LogSeverity.Warning,
             Status = LogStatus.Failure,
@@ -172,10 +181,14 @@ public class SystemActivityLogService : ISystemActivityLogService
             UserAgent = userAgent,
         });
 
-    public Task LogUserBlockedAsync(Guid actorAdminId, Guid targetUserId)
-        => LogAsync(new CreateSystemActivityLogRequest
+    public async Task LogUserBlockedAsync(Guid actorAdminId, Guid targetUserId)
+    {
+        var (name, email) = await ResolveActorAsync(actorAdminId);
+        await LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = actorAdminId,
+            ActorName = name,
+            ActorEmail = email is null ? null : MaskEmail(email),
             ActionType = LogActionType.UserDeactivated,
             Category = LogCategory.UserManagement,
             EntityType = "User",
@@ -184,11 +197,16 @@ public class SystemActivityLogService : ISystemActivityLogService
             Status = LogStatus.Success,
             Description = $"Admin blocked user '{targetUserId}'.",
         });
+    }
 
-    public Task LogUserUnblockedAsync(Guid actorAdminId, Guid targetUserId)
-        => LogAsync(new CreateSystemActivityLogRequest
+    public async Task LogUserUnblockedAsync(Guid actorAdminId, Guid targetUserId)
+    {
+        var (name, email) = await ResolveActorAsync(actorAdminId);
+        await LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = actorAdminId,
+            ActorName = name,
+            ActorEmail = email is null ? null : MaskEmail(email),
             ActionType = LogActionType.UserReactivated,
             Category = LogCategory.UserManagement,
             EntityType = "User",
@@ -197,11 +215,16 @@ public class SystemActivityLogService : ISystemActivityLogService
             Status = LogStatus.Success,
             Description = $"Admin unblocked user '{targetUserId}'.",
         });
+    }
 
-    public Task LogCategoryCreatedAsync(Guid actorAdminId, Guid categoryId, string categoryName)
-        => LogAsync(new CreateSystemActivityLogRequest
+    public async Task LogCategoryCreatedAsync(Guid actorAdminId, Guid categoryId, string categoryName)
+    {
+        var (name, email) = await ResolveActorAsync(actorAdminId);
+        await LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = actorAdminId,
+            ActorName = name,
+            ActorEmail = email is null ? null : MaskEmail(email),
             ActionType = LogActionType.CategoryCreated,
             Category = LogCategory.SystemConfiguration,
             EntityType = "Category",
@@ -210,11 +233,16 @@ public class SystemActivityLogService : ISystemActivityLogService
             Status = LogStatus.Success,
             Description = $"Admin created category '{categoryName}'.",
         });
+    }
 
-    public Task LogCategoryUpdatedAsync(Guid actorAdminId, Guid categoryId, string categoryName)
-        => LogAsync(new CreateSystemActivityLogRequest
+    public async Task LogCategoryUpdatedAsync(Guid actorAdminId, Guid categoryId, string categoryName)
+    {
+        var (name, email) = await ResolveActorAsync(actorAdminId);
+        await LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = actorAdminId,
+            ActorName = name,
+            ActorEmail = email is null ? null : MaskEmail(email),
             ActionType = LogActionType.CategoryUpdated,
             Category = LogCategory.SystemConfiguration,
             EntityType = "Category",
@@ -223,11 +251,16 @@ public class SystemActivityLogService : ISystemActivityLogService
             Status = LogStatus.Success,
             Description = $"Admin updated category '{categoryName}'.",
         });
+    }
 
-    public Task LogCategoryDeletedAsync(Guid actorAdminId, Guid categoryId, string categoryName)
-        => LogAsync(new CreateSystemActivityLogRequest
+    public async Task LogCategoryDeletedAsync(Guid actorAdminId, Guid categoryId, string categoryName)
+    {
+        var (name, email) = await ResolveActorAsync(actorAdminId);
+        await LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = actorAdminId,
+            ActorName = name,
+            ActorEmail = email is null ? null : MaskEmail(email),
             ActionType = LogActionType.CategoryDeleted,
             Category = LogCategory.SystemConfiguration,
             EntityType = "Category",
@@ -236,19 +269,24 @@ public class SystemActivityLogService : ISystemActivityLogService
             Status = LogStatus.Success,
             Description = $"Admin deleted category '{categoryName}'.",
         });
+    }
 
-    public Task LogProductModerationAsync(Guid actorAdminId, Guid productId, ProductStatus newStatus, string? reason = null)
+    public async Task LogProductModerationAsync(Guid actorAdminId, Guid productId, ProductStatus newStatus, string? reason = null)
     {
         var actionType = newStatus switch
         {
+            ProductStatus.Active when reason != null && reason.Contains("Restored") => LogActionType.ProductRestored,
             ProductStatus.Active => LogActionType.ProductApproved,
             ProductStatus.Deleted => LogActionType.ProductDeleted,
             _ => LogActionType.ProductRejected,
         };
 
-        return LogAsync(new CreateSystemActivityLogRequest
+        var (name, email) = await ResolveActorAsync(actorAdminId);
+        await LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = actorAdminId,
+            ActorName = name,
+            ActorEmail = email is null ? null : MaskEmail(email),
             ActionType = actionType,
             Category = LogCategory.ContentModeration,
             EntityType = "Product",
@@ -259,10 +297,14 @@ public class SystemActivityLogService : ISystemActivityLogService
         });
     }
 
-    public Task LogProductDeletedByAdminAsync(Guid actorAdminId, Guid productId)
-        => LogAsync(new CreateSystemActivityLogRequest
+    public async Task LogProductDeletedByAdminAsync(Guid actorAdminId, Guid productId)
+    {
+        var (name, email) = await ResolveActorAsync(actorAdminId);
+        await LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = actorAdminId,
+            ActorName = name,
+            ActorEmail = email is null ? null : MaskEmail(email),
             ActionType = LogActionType.ProductDeleted,
             Category = LogCategory.ContentModeration,
             EntityType = "Product",
@@ -271,23 +313,33 @@ public class SystemActivityLogService : ISystemActivityLogService
             Status = LogStatus.Success,
             Description = $"Admin deleted product '{productId}'.",
         });
+    }
 
-    public Task LogBroadcastNotificationAsync(Guid actorAdminId, string summary)
-        => LogAsync(new CreateSystemActivityLogRequest
+    public async Task LogBroadcastNotificationAsync(Guid actorAdminId, string summary)
+    {
+        var (name, email) = await ResolveActorAsync(actorAdminId);
+        await LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = actorAdminId,
+            ActorName = name,
+            ActorEmail = email is null ? null : MaskEmail(email),
             ActionType = LogActionType.Other,
             Category = LogCategory.General,
             Severity = LogSeverity.Info,
             Status = LogStatus.Success,
             Description = $"Admin sent broadcast notification: {summary}",
         });
+    }
 
-    public Task LogPremiumGrantedByAdminAsync(Guid actorAdminId, Guid productId, int durationDays)
-        => LogAsync(new CreateSystemActivityLogRequest
+    public async Task LogPremiumGrantedByAdminAsync(Guid actorAdminId, Guid productId, int durationDays)
+    {
+        var (name, email) = await ResolveActorAsync(actorAdminId);
+        await LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = actorAdminId,
-            ActionType = LogActionType.Other,
+            ActorName = name,
+            ActorEmail = email is null ? null : MaskEmail(email),
+            ActionType = LogActionType.PremiumGranted,
             Category = LogCategory.ProductManagement,
             EntityType = "Product",
             EntityId = productId.ToString(),
@@ -295,12 +347,17 @@ public class SystemActivityLogService : ISystemActivityLogService
             Status = LogStatus.Success,
             Description = $"Admin granted premium to product '{productId}' for {durationDays} days.",
         });
+    }
 
-    public Task LogPremiumRemovedByAdminAsync(Guid actorAdminId, Guid productId)
-        => LogAsync(new CreateSystemActivityLogRequest
+    public async Task LogPremiumRemovedByAdminAsync(Guid actorAdminId, Guid productId)
+    {
+        var (name, email) = await ResolveActorAsync(actorAdminId);
+        await LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = actorAdminId,
-            ActionType = LogActionType.Other,
+            ActorName = name,
+            ActorEmail = email is null ? null : MaskEmail(email),
+            ActionType = LogActionType.PremiumRemoved,
             Category = LogCategory.ProductManagement,
             EntityType = "Product",
             EntityId = productId.ToString(),
@@ -308,12 +365,17 @@ public class SystemActivityLogService : ISystemActivityLogService
             Status = LogStatus.Success,
             Description = $"Admin removed premium from product '{productId}'.",
         });
+    }
 
-    public Task LogPaymentSuccessAsync(Guid userId, string transactionId, decimal amount)
-        => LogAsync(new CreateSystemActivityLogRequest
+    public async Task LogPaymentSuccessAsync(Guid userId, string transactionId, decimal amount)
+    {
+        var (name, email) = await ResolveActorAsync(userId);
+        await LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = userId,
-            ActionType = LogActionType.Other,
+            ActorName = name,
+            ActorEmail = email is null ? null : MaskEmail(email),
+            ActionType = LogActionType.PaymentSuccess,
             Category = LogCategory.PaymentManagement,
             EntityType = "Payment",
             EntityId = transactionId,
@@ -321,12 +383,17 @@ public class SystemActivityLogService : ISystemActivityLogService
             Status = LogStatus.Success,
             Description = $"Payment succeeded. Transaction='{transactionId}' Amount={amount / 100m:F2} EGP.",
         });
+    }
 
-    public Task LogPaymentFailedAsync(Guid userId, string transactionId, decimal amount, string? reason = null)
-        => LogAsync(new CreateSystemActivityLogRequest
+    public async Task LogPaymentFailedAsync(Guid userId, string transactionId, decimal amount, string? reason = null)
+    {
+        var (name, email) = await ResolveActorAsync(userId);
+        await LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = userId,
-            ActionType = LogActionType.Other,
+            ActorName = name,
+            ActorEmail = email is null ? null : MaskEmail(email),
+            ActionType = LogActionType.PaymentFailed,
             Category = LogCategory.PaymentManagement,
             EntityType = "Payment",
             EntityId = transactionId,
@@ -334,12 +401,13 @@ public class SystemActivityLogService : ISystemActivityLogService
             Status = LogStatus.Failure,
             Description = $"Payment failed. Transaction='{transactionId}' Amount={amount / 100m:F2} EGP.{(reason is null ? "" : $" Reason: {reason}")}",
         });
+    }
 
     public Task LogUnhandledExceptionAsync(Exception ex, string? path = null, Guid? userId = null)
         => LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = userId,
-            ActionType = LogActionType.Other,
+            ActionType = LogActionType.UnhandledException,
             Category = LogCategory.General,
             Severity = LogSeverity.Error,
             Status = LogStatus.Failure,
@@ -350,7 +418,7 @@ public class SystemActivityLogService : ISystemActivityLogService
         => LogAsync(new CreateSystemActivityLogRequest
         {
             ActorUserId = userId,
-            ActionType = LogActionType.Other,
+            ActionType = LogActionType.InfrastructureFailure,
             Category = LogCategory.General,
             Severity = LogSeverity.Critical,
             Status = LogStatus.Failure,
@@ -386,6 +454,12 @@ public class SystemActivityLogService : ISystemActivityLogService
             Status = LogStatus.Success,
             Description = $"Admin reviewed report '{reportId}' on {targetType} '{targetId}'. Decision: {newStatus}.",
         });
+
+    private async Task<(string? name, string? email)> ResolveActorAsync(Guid userId)
+    {
+        var user = await _unitOfWork.User.GetByIdAsync(userId);
+        return (user?.FullName, user?.Email);
+    }
 
     private static string MaskEmail(string email)
     {

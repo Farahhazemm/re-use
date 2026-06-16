@@ -193,14 +193,27 @@ public class PaymobService : IPaymentService
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         });
 
-        var response = await _http.SendAsync(request);
-        var body = await response.Content.ReadAsStringAsync();
+        HttpResponseMessage response;
+        string body;
+        try
+        {
+            response = await _http.SendAsync(request);
+            body = await response.Content.ReadAsStringAsync();
+        }
+        catch (HttpRequestException ex)
+        {
+            await _activityLog.LogInfrastructureFailureAsync(
+                "Paymob",
+                $"Network error calling Intention API: {ex.Message}");
+            throw new Exception($"Paymob Intention API is unreachable: {ex.Message}", ex);
+        }
 
         if (!response.IsSuccessStatusCode)
         {
+            var truncatedBody = body[..Math.Min(body.Length, 300)];
             await _activityLog.LogInfrastructureFailureAsync(
-            "Paymob",
-            $"Intention API call failed with status {response.StatusCode}: {body[..Math.Min(body.Length, 300)]}");
+                "Paymob",
+                $"Intention API call failed with status {(int)response.StatusCode} {response.StatusCode}: {truncatedBody}");
 
             throw new Exception($"Paymob Intention API call failed with status {response.StatusCode}: {body}");
         }
