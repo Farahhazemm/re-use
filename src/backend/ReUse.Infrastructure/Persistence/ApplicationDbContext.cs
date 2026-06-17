@@ -36,6 +36,8 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<Report> Reports { get; set; }
 
+    public DbSet<BroadcastMessage> BroadcastMessages { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

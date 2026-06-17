@@ -66,4 +66,23 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             filterParams.Pagination.PageNumber,
             filterParams.Pagination.PageSize);
     }
+
+    public async Task<List<Guid>> GetIdsByIdentityIdsAsync(IEnumerable<string> identityIds)
+    {
+        var idSet = identityIds.ToHashSet();
+        return await _context.Set<User>()
+            .AsNoTracking()
+            .Where(u => u.IsActive && idSet.Contains(u.IdentityUserId))
+            .Select(u => u.Id)
+            .ToListAsync();
+    }
+
+    public async Task<List<Guid>> GetAllActiveUserIdsAsync()
+    {
+        return await _context.Set<User>()
+            .AsNoTracking()
+            .Where(u => u.IsActive)
+            .Select(u => u.Id)
+            .ToListAsync();
+    }
 }

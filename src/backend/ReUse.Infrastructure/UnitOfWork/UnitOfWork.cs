@@ -33,6 +33,7 @@ public class UnitOfWork : IUnitOfWork
         Message = new MessageRepository(_context);
 
         Reports = new ReportRepository(_context);
+        Broadcasts = new BroadcastRepository(_context);
     }
     public IUserRepository User { get; private set; }
 
@@ -60,6 +61,8 @@ public class UnitOfWork : IUnitOfWork
     public IMessageRepository Message { get; private set; }
 
     public IReportRepository Reports { get; private set; }
+
+    public IBroadcastRepository Broadcasts { get; private set; }
 
 
     public async Task CommitTransactionAsync()

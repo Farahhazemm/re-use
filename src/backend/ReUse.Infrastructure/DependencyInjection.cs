@@ -68,6 +68,7 @@ public static class DependencyInjection
         services.AddScoped<IRecommendationRepository, RecommendationRepository>();
         services.AddScoped<IFeedbackRepository, FeedbackRepository>();
         services.AddScoped<IReportRepository, ReportRepository>();
+        services.AddScoped<IBroadcastRepository, BroadcastRepository>();
         #endregion
 
         #region Services
@@ -83,6 +84,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>();
         services.AddScoped<IActivityService, ActivityService>();
         services.AddScoped<IAdminUserService, AdminUserService>();
+        services.AddScoped<IAdminBroadcastService, ReUse.Infrastructure.Services.Broadcast.AdminBroadcastService>();
         services.AddHttpClient<IPaymentService, PaymobService>();
 
         // View tracking (fire-and-forget, session-deduplicated)
@@ -110,6 +112,7 @@ public static class DependencyInjection
 
         // Background jobs
         services.AddHostedService<RecentFavoriteCountRefreshJob>();
+        services.AddHostedService<ScheduledBroadcastJob>();
 
         return services;
     }

@@ -18,6 +18,8 @@ public interface IUnitOfWork : IDisposable
     IFavoriteRepository Favorites { get; }
 
     INotificationRepository Notifications { get; }
+    IBroadcastRepository Broadcasts { get; }
+
     IPaymentRepository Payments { get; }
 
     IRecommendationRepository Recommendations { get; }
