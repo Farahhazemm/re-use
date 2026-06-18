@@ -29,4 +29,5 @@ public interface IConversationRepository : IBaseRepository<Conversation>
 
     Task DeleteByUserIdAsync(Guid userId);
 
+    Task<List<Conversation>> GetByProductIdAsync(Guid productId);
 }

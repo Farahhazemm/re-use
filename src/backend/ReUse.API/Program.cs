@@ -41,7 +41,10 @@ public class Program
         app.ApplyMigrations();
 
 
-        app.SeedData();
+        if (app.Environment.IsDevelopment())
+        {
+            app.SeedData();
+        }
 
         if (app.Environment.IsDevelopment())
         {

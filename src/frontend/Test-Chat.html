@@ -1,814 +1,994 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ReUse — Chat Hub Tester</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ReUse — Chat Hub Tester</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=DM+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
 
-  <style>
-    :root {
-      --bg:       #0d0d12;
-      --panel:    #13131b;
-      --card:     #1b1b27;
-      --border:   #26263a;
-      --accent:   #6c63ff;
-      --green:    #3dffa0;
-      --red:      #ff5f5f;
-      --yellow:   #ffd166;
-      --text:     #ddddf0;
-      --muted:    #5c5c7a;
-      --mono:     'IBM Plex Mono', monospace;
-      --sans:     'DM Sans', sans-serif;
-      --radius:   12px;
-    }
+    <style>
+      :root {
+        --bg: #0d0d12;
+        --panel: #13131b;
+        --card: #1b1b27;
+        --border: #26263a;
+        --accent: #6c63ff;
+        --green: #3dffa0;
+        --red: #ff5f5f;
+        --yellow: #ffd166;
+        --text: #ddddf0;
+        --muted: #5c5c7a;
+        --mono: "IBM Plex Mono", monospace;
+        --sans: "DM Sans", sans-serif;
+        --radius: 12px;
+      }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
 
-    body {
-      font-family: var(--sans);
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      display: grid;
-      grid-template-columns: 340px 1fr;
-      grid-template-rows: 1fr;
-      overflow: hidden;
-    }
+      body {
+        font-family: var(--sans);
+        background: var(--bg);
+        color: var(--text);
+        height: 100vh;
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        grid-template-rows: 1fr;
+        overflow: hidden;
+      }
 
-    /* ── SIDEBAR ─────────────────────────────── */
-    .sidebar {
-      background: var(--panel);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+      /* ── SIDEBAR ─────────────────────────────── */
+      .sidebar {
+        background: var(--panel);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
 
-    .sidebar-header {
-      padding: 24px 20px 16px;
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
+      .sidebar-header {
+        padding: 24px 20px 16px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+      }
 
-    .logo {
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
+      .logo {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
 
-    .logo-icon {
-      width: 32px;
-      height: 32px;
-      background: var(--accent);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-    }
+      .logo-icon {
+        width: 32px;
+        height: 32px;
+        background: var(--accent);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+      }
 
-    .conn-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      font-family: var(--mono);
-      font-size: 11px;
-    }
+      .conn-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        font-family: var(--mono);
+        font-size: 11px;
+      }
 
-    .dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--muted);
-      flex-shrink: 0;
-      transition: all 0.3s;
-    }
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--muted);
+        flex-shrink: 0;
+        transition: all 0.3s;
+      }
 
-    .dot.live { background: var(--green); box-shadow: 0 0 8px var(--green); }
-    .dot.err  { background: var(--red);   box-shadow: 0 0 8px var(--red); }
+      .dot.live {
+        background: var(--green);
+        box-shadow: 0 0 8px var(--green);
+      }
+      .dot.err {
+        background: var(--red);
+        box-shadow: 0 0 8px var(--red);
+      }
 
-    .sidebar-scroll {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px 20px;
-    }
+      .sidebar-scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px 20px;
+      }
 
-    .sidebar-scroll::-webkit-scrollbar { width: 4px; }
-    .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
-    .sidebar-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+      .sidebar-scroll::-webkit-scrollbar {
+        width: 4px;
+      }
+      .sidebar-scroll::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 4px;
+      }
 
-    .section { margin-bottom: 24px; }
+      .section {
+        margin-bottom: 24px;
+      }
 
-    .section-label {
-      font-family: var(--mono);
-      font-size: 10px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 10px;
-    }
+      .section-label {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
 
-    .field { margin-bottom: 10px; }
+      .field {
+        margin-bottom: 10px;
+      }
 
-    .field label {
-      display: block;
-      font-size: 11px;
-      color: var(--muted);
-      font-family: var(--mono);
-      margin-bottom: 5px;
-    }
+      .field label {
+        display: block;
+        font-size: 11px;
+        color: var(--muted);
+        font-family: var(--mono);
+        margin-bottom: 5px;
+      }
 
-    input, select, textarea {
-      width: 100%;
-      padding: 9px 11px;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 12px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 9px 11px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 12px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
 
-    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-    textarea { resize: vertical; min-height: 70px; }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: var(--accent);
+      }
+      textarea {
+        resize: vertical;
+        min-height: 70px;
+      }
 
-    select option { background: var(--card); }
+      select option {
+        background: var(--card);
+      }
 
-    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+      .btn-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
 
-    .btn {
-      flex: 1;
-      min-width: 90px;
-      padding: 9px 12px;
-      border-radius: 8px;
-      border: none;
-      font-family: var(--sans);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-      text-align: center;
-    }
+      .btn {
+        flex: 1;
+        min-width: 90px;
+        padding: 9px 12px;
+        border-radius: 8px;
+        border: none;
+        font-family: var(--sans);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-align: center;
+      }
 
-    .btn-primary   { background: var(--accent); color: #fff; }
-    .btn-primary:hover   { filter: brightness(1.15); }
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        filter: brightness(1.15);
+      }
 
-    .btn-ghost {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text);
-    }
-    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+      .btn-ghost {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+      }
+      .btn-ghost:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
 
-    .btn-danger   { background: var(--red); color: #fff; }
-    .btn-danger:hover { filter: brightness(1.1); }
+      .btn-danger {
+        background: var(--red);
+        color: #fff;
+      }
+      .btn-danger:hover {
+        filter: brightness(1.1);
+      }
 
-    .btn-full { width: 100%; min-width: unset; margin-bottom: 8px; }
+      .btn-full {
+        width: 100%;
+        min-width: unset;
+        margin-bottom: 8px;
+      }
 
-    /* ── MAIN ─────────────────────────────────── */
-    .main {
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+      /* ── MAIN ─────────────────────────────────── */
+      .main {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
 
-    .main-header {
-      padding: 18px 28px;
-      border-bottom: 1px solid var(--border);
-      background: var(--panel);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-shrink: 0;
-    }
+      .main-header {
+        padding: 18px 28px;
+        border-bottom: 1px solid var(--border);
+        background: var(--panel);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+      }
 
-    .main-header h2 {
-      font-size: 15px;
-      font-weight: 700;
-    }
+      .main-header h2 {
+        font-size: 15px;
+        font-weight: 700;
+      }
 
-    .badge {
-      font-family: var(--mono);
-      font-size: 10px;
-      padding: 3px 8px;
-      border-radius: 100px;
-      border: 1px solid var(--border);
-      color: var(--muted);
-    }
+      .badge {
+        font-family: var(--mono);
+        font-size: 10px;
+        padding: 3px 8px;
+        border-radius: 100px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
 
-    /* ── MESSAGES ─────────────────────────────── */
-    .messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px 28px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
+      /* ── MESSAGES ─────────────────────────────── */
+      .messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
 
-    .messages::-webkit-scrollbar { width: 4px; }
-    .messages::-webkit-scrollbar-track { background: transparent; }
-    .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+      .messages::-webkit-scrollbar {
+        width: 4px;
+      }
+      .messages::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .messages::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 4px;
+      }
 
-    .msg {
-      max-width: 68%;
-      border-radius: var(--radius);
-      padding: 12px 14px;
-      border: 1px solid var(--border);
-      animation: pop 0.2s ease;
-      position: relative;
-    }
+      .msg {
+        max-width: 68%;
+        border-radius: var(--radius);
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        animation: pop 0.2s ease;
+        position: relative;
+      }
 
-    .msg.self {
-      align-self: flex-end;
-      background: rgba(108,99,255,.12);
-      border-color: rgba(108,99,255,.35);
-    }
+      .msg.self {
+        align-self: flex-end;
+        background: rgba(108, 99, 255, 0.12);
+        border-color: rgba(108, 99, 255, 0.35);
+      }
 
-    .msg.other {
-      align-self: flex-start;
-      background: var(--card);
-    }
+      .msg.other {
+        align-self: flex-start;
+        background: var(--card);
+      }
 
-    .msg.system {
-      align-self: center;
-      background: transparent;
-      border-color: transparent;
-      max-width: 100%;
-    }
+      .msg.system {
+        align-self: center;
+        background: transparent;
+        border-color: transparent;
+        max-width: 100%;
+      }
 
-    .msg-sender {
-      font-size: 10px;
-      font-family: var(--mono);
-      color: var(--muted);
-      margin-bottom: 5px;
-    }
+      .msg-sender {
+        font-size: 10px;
+        font-family: var(--mono);
+        color: var(--muted);
+        margin-bottom: 5px;
+      }
 
-    .msg.self .msg-sender { color: rgba(108,99,255,.8); text-align: right; }
+      .msg.self .msg-sender {
+        color: rgba(108, 99, 255, 0.8);
+        text-align: right;
+      }
 
-    .msg-type {
-      display: inline-block;
-      font-size: 9px;
-      font-family: var(--mono);
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin-bottom: 7px;
-    }
+      .msg-type {
+        display: inline-block;
+        font-size: 9px;
+        font-family: var(--mono);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-bottom: 7px;
+      }
 
-    .type-Text    { background: rgba(61,255,160,.1); color: var(--green); }
-    .type-Media   { background: rgba(108,99,255,.15); color: var(--accent); }
-    .type-Offer   { background: rgba(255,209,102,.1); color: var(--yellow); }
-    .type-OfferAccepted { background: rgba(61,255,160,.1); color: var(--green); }
-    .type-OfferDeclined { background: rgba(255,95,95,.1); color: var(--red); }
-    .type-SystemEvent   { background: rgba(255,255,255,.05); color: var(--muted); }
+      .type-Text {
+        background: rgba(61, 255, 160, 0.1);
+        color: var(--green);
+      }
+      .type-Media {
+        background: rgba(108, 99, 255, 0.15);
+        color: var(--accent);
+      }
+      .type-Offer {
+        background: rgba(255, 209, 102, 0.1);
+        color: var(--yellow);
+      }
+      .type-OfferAccepted {
+        background: rgba(61, 255, 160, 0.1);
+        color: var(--green);
+      }
+      .type-OfferDeclined {
+        background: rgba(255, 95, 95, 0.1);
+        color: var(--red);
+      }
+      .type-SystemEvent {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--muted);
+      }
 
-    .msg-content {
-      font-size: 13px;
-      line-height: 1.55;
-      word-break: break-word;
-    }
+      .msg-content {
+        font-size: 13px;
+        line-height: 1.55;
+        word-break: break-word;
+      }
 
-    .msg-offer {
-      margin-top: 8px;
-      padding: 6px 10px;
-      border-radius: 7px;
-      background: rgba(255,209,102,.08);
-      border: 1px solid rgba(255,209,102,.2);
-      font-family: var(--mono);
-      font-size: 13px;
-      color: var(--yellow);
-      font-weight: 600;
-    }
+      .msg-offer {
+        margin-top: 8px;
+        padding: 6px 10px;
+        border-radius: 7px;
+        background: rgba(255, 209, 102, 0.08);
+        border: 1px solid rgba(255, 209, 102, 0.2);
+        font-family: var(--mono);
+        font-size: 13px;
+        color: var(--yellow);
+        font-weight: 600;
+      }
 
-    .msg-img {
-      max-width: 100%;
-      border-radius: 8px;
-      margin-top: 6px;
-    }
+      .msg-img {
+        max-width: 100%;
+        border-radius: 8px;
+        margin-top: 6px;
+      }
 
-    .msg-time {
-      margin-top: 8px;
-      font-size: 10px;
-      color: var(--muted);
-      font-family: var(--mono);
-      text-align: right;
-    }
+      .msg-time {
+        margin-top: 8px;
+        font-size: 10px;
+        color: var(--muted);
+        font-family: var(--mono);
+        text-align: right;
+      }
 
-    .msg.system .msg-content {
-      font-size: 11px;
-      font-family: var(--mono);
-      color: var(--muted);
-      text-align: center;
-    }
+      .msg.system .msg-content {
+        font-size: 11px;
+        font-family: var(--mono);
+        color: var(--muted);
+        text-align: center;
+      }
 
-    /* real-time badge */
-    .rt-badge {
-      position: absolute;
-      top: -7px;
-      right: -7px;
-      background: var(--green);
-      color: #000;
-      font-size: 8px;
-      font-family: var(--mono);
-      font-weight: 600;
-      padding: 2px 5px;
-      border-radius: 4px;
-      animation: fadeOut 3s forwards;
-    }
+      /* real-time badge */
+      .rt-badge {
+        position: absolute;
+        top: -7px;
+        right: -7px;
+        background: var(--green);
+        color: #000;
+        font-size: 8px;
+        font-family: var(--mono);
+        font-weight: 600;
+        padding: 2px 5px;
+        border-radius: 4px;
+        animation: fadeOut 3s forwards;
+      }
 
-    @keyframes fadeOut {
-      0%   { opacity: 1; }
-      70%  { opacity: 1; }
-      100% { opacity: 0; }
-    }
+      @keyframes fadeOut {
+        0% {
+          opacity: 1;
+        }
+        70% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
 
-    /* ── CONSOLE ─────────────────────────────── */
-    .console {
-      height: 150px;
-      overflow-y: auto;
-      border-top: 1px solid var(--border);
-      background: #09090d;
-      padding: 12px 20px;
-      font-family: var(--mono);
-      font-size: 11px;
-      flex-shrink: 0;
-    }
+      /* ── CONSOLE ─────────────────────────────── */
+      .console {
+        height: 150px;
+        overflow-y: auto;
+        border-top: 1px solid var(--border);
+        background: #09090d;
+        padding: 12px 20px;
+        font-family: var(--mono);
+        font-size: 11px;
+        flex-shrink: 0;
+      }
 
-    .console::-webkit-scrollbar { width: 3px; }
-    .console::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+      .console::-webkit-scrollbar {
+        width: 3px;
+      }
+      .console::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 4px;
+      }
 
-    .log { margin-bottom: 5px; line-height: 1.4; }
-    .log .ts { color: var(--muted); margin-right: 6px; }
-    .log.info   .msg-text { color: var(--text); }
-    .log.success .msg-text { color: var(--green); }
-    .log.error  .msg-text { color: var(--red); }
-    .log.warn   .msg-text { color: var(--yellow); }
+      .log {
+        margin-bottom: 5px;
+        line-height: 1.4;
+      }
+      .log .ts {
+        color: var(--muted);
+        margin-right: 6px;
+      }
+      .log.info .msg-text {
+        color: var(--text);
+      }
+      .log.success .msg-text {
+        color: var(--green);
+      }
+      .log.error .msg-text {
+        color: var(--red);
+      }
+      .log.warn .msg-text {
+        color: var(--yellow);
+      }
 
-    /* ── EMPTY STATE ──────────────────────────── */
-    .empty {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      gap: 10px;
-      color: var(--muted);
-    }
+      /* ── EMPTY STATE ──────────────────────────── */
+      .empty {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 10px;
+        color: var(--muted);
+      }
 
-    .empty-icon { font-size: 36px; opacity: .3; }
-    .empty p { font-size: 13px; font-family: var(--mono); }
+      .empty-icon {
+        font-size: 36px;
+        opacity: 0.3;
+      }
+      .empty p {
+        font-size: 13px;
+        font-family: var(--mono);
+      }
 
-    @keyframes pop {
-      from { opacity: 0; transform: translateY(8px) scale(.97); }
-      to   { opacity: 1; transform: translateY(0) scale(1); }
-    }
+      @keyframes pop {
+        from {
+          opacity: 0;
+          transform: translateY(8px) scale(0.97);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
 
-    /* divider */
-    hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+      /* divider */
+      hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 14px 0;
+      }
 
-    #msg-count {
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--muted);
-    }
-  </style>
-</head>
-<body>
+      #msg-count {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ─────────────── SIDEBAR ─────────────────── -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <div class="logo-icon">💬</div>
+          Chat Hub Tester
+        </div>
+        <div class="conn-bar">
+          <div class="dot" id="dot"></div>
+          <span id="conn-label">Disconnected</span>
+        </div>
+      </div>
 
-<!-- ─────────────── SIDEBAR ─────────────────── -->
-<div class="sidebar">
-  <div class="sidebar-header">
-    <div class="logo">
-      <div class="logo-icon">💬</div>
-      Chat Hub Tester
+      <div class="sidebar-scroll">
+        <!-- CONNECTION -->
+        <div class="section">
+          <div class="section-label">Connection</div>
+
+          <div class="field">
+            <label>Hub URL</label>
+            <input id="hubUrl" value="http://localhost:5000/hubs/chat" />
+          </div>
+
+          <div class="field">
+            <label>Conversation ID</label>
+            <input id="convId" placeholder="paste guid here" />
+          </div>
+
+          <div class="btn-row" style="margin-bottom: 8px">
+            <button class="btn btn-primary" onclick="connect()">Connect</button>
+            <button class="btn btn-ghost" onclick="disconnect()">Disconnect</button>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-ghost" onclick="joinConv()">Join Conv.</button>
+            <button class="btn btn-ghost" onclick="leaveConv()">Leave Conv.</button>
+          </div>
+        </div>
+
+        <hr />
+
+        <!-- SEND MESSAGE -->
+        <div class="section">
+          <div class="section-label">Send Message</div>
+
+          <div class="field">
+            <label>Type</label>
+            <select id="msgType">
+              <option value="Text">Text</option>
+              <option value="Media">Media</option>
+              <option value="Offer">Offer (WantedOffer convs only)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Content / Note</label>
+            <textarea id="content" placeholder="Type a message..."></textarea>
+          </div>
+
+          <div class="field" id="priceField" style="display: none">
+            <label>Offer Price (EGP)</label>
+            <input id="offerPrice" type="number" step="0.01" placeholder="e.g. 250.00" />
+          </div>
+
+          <div class="field" id="mediaField" style="display: none">
+            <label>Media URL</label>
+            <input id="mediaUrl" placeholder="https://res.cloudinary.com/..." />
+          </div>
+
+          <button class="btn btn-primary btn-full" onclick="sendMsg()">Send Message</button>
+        </div>
+
+        <hr />
+
+        <!-- OFFER ACTIONS -->
+        <div class="section">
+          <div class="section-label">Offer Actions (WantedOffer only)</div>
+          <div class="btn-row">
+            <button
+              class="btn btn-ghost"
+              onclick="acceptOffer()"
+              style="color: var(--green); border-color: var(--green)"
+            >
+              ✓ Accept
+            </button>
+            <button
+              class="btn btn-ghost"
+              onclick="declineOffer()"
+              style="color: var(--red); border-color: var(--red)"
+            >
+              ✗ Decline
+            </button>
+          </div>
+        </div>
+
+        <hr />
+
+        <!-- TOOLS -->
+        <div class="section">
+          <div class="section-label">Tools</div>
+          <button class="btn btn-ghost btn-full" onclick="loadMessages()">↓ Load Messages</button>
+          <button class="btn btn-ghost btn-full" onclick="markRead()">✓ Mark as Read</button>
+          <button class="btn btn-danger btn-full" onclick="closeConv()">
+            ✕ Close Conversation
+          </button>
+        </div>
+      </div>
     </div>
-    <div class="conn-bar">
-      <div class="dot" id="dot"></div>
-      <span id="conn-label">Disconnected</span>
-    </div>
-  </div>
 
-  <div class="sidebar-scroll">
-
-    <!-- CONNECTION -->
-    <div class="section">
-      <div class="section-label">Connection</div>
-
-      <div class="field">
-        <label>Hub URL</label>
-        <input id="hubUrl" value="http://localhost:5000/hubs/chat"/>
+    <!-- ─────────────── MAIN ─────────────────── -->
+    <div class="main">
+      <div class="main-header">
+        <h2>Messages</h2>
+        <span id="msg-count" class="badge">0 messages</span>
       </div>
 
-      <div class="field">
-        <label>Conversation ID</label>
-        <input id="convId" placeholder="paste guid here"/>
+      <div id="messages" class="messages">
+        <div class="empty" id="empty-state">
+          <div class="empty-icon">💬</div>
+          <p>Connect → paste a conversation ID → Join</p>
+        </div>
       </div>
 
-      <div class="btn-row" style="margin-bottom:8px;">
-        <button class="btn btn-primary" onclick="connect()">Connect</button>
-        <button class="btn btn-ghost"   onclick="disconnect()">Disconnect</button>
-      </div>
-
-      <div class="btn-row">
-        <button class="btn btn-ghost" onclick="joinConv()">Join Conv.</button>
-        <button class="btn btn-ghost" onclick="leaveConv()">Leave Conv.</button>
-      </div>
+      <div id="console" class="console"></div>
     </div>
 
-    <hr/>
+    <script>
+      // ── State ──────────────────────────────────────────────────────────────────
+      let hub = null;
+      let msgCount = 0;
 
-    <!-- SEND MESSAGE -->
-    <div class="section">
-      <div class="section-label">Send Message</div>
+      // ── Logging ────────────────────────────────────────────────────────────────
+      function log(text, type = "info") {
+        const el = document.getElementById("console");
+        const row = document.createElement("div");
+        row.className = `log ${type}`;
+        const ts = new Date().toLocaleTimeString("en-GB", { hour12: false });
+        row.innerHTML = `<span class="ts">${ts}</span><span class="msg-text">${escHtml(text)}</span>`;
+        el.prepend(row);
+      }
 
-      <div class="field">
-        <label>Type</label>
-        <select id="msgType">
-          <option value="Text">Text</option>
-          <option value="Media">Media</option>
-          <option value="Offer">Offer (WantedOffer convs only)</option>
-        </select>
-      </div>
+      // ── Connection status ──────────────────────────────────────────────────────
+      function setStatus(state) {
+        const dot = document.getElementById("dot");
+        const label = document.getElementById("conn-label");
+        dot.className = "dot";
+        if (state === "connected") {
+          dot.classList.add("live");
+          label.textContent = "Connected";
+        } else if (state === "error") {
+          dot.classList.add("err");
+          label.textContent = "Error";
+        } else {
+          label.textContent = "Disconnected";
+        }
+      }
 
-      <div class="field">
-        <label>Content / Note</label>
-        <textarea id="content" placeholder="Type a message..."></textarea>
-      </div>
+      // ── Show/hide offer / media fields ────────────────────────────────────────
+      document.getElementById("msgType").addEventListener("change", function () {
+        document.getElementById("priceField").style.display =
+          this.value === "Offer" ? "block" : "none";
+        document.getElementById("mediaField").style.display =
+          this.value === "Media" ? "block" : "none";
+      });
 
-      <div class="field" id="priceField" style="display:none;">
-        <label>Offer Price (EGP)</label>
-        <input id="offerPrice" type="number" step="0.01" placeholder="e.g. 250.00"/>
-      </div>
+      // ── API helper ─────────────────────────────────────────────────────────────
+      async function api(path, method = "GET", body = null) {
+        const base = document.getElementById("hubUrl").value.replace("/hubs/chat", "");
+        const res = await fetch(`${base}${path}`, {
+          method,
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: body ? JSON.stringify(body) : null,
+        });
 
-      <div class="field" id="mediaField" style="display:none;">
-        <label>Media URL</label>
-        <input id="mediaUrl" placeholder="https://res.cloudinary.com/..."/>
-      </div>
+        let data = null;
+        try {
+          data = await res.json();
+        } catch {}
 
-      <button class="btn btn-primary btn-full" onclick="sendMsg()">Send Message</button>
-    </div>
+        if (!res.ok) {
+          const msg = data?.message || data?.title || res.statusText || `HTTP ${res.status}`;
+          throw new Error(msg);
+        }
+        return data;
+      }
 
-    <hr/>
+      // ── Connect ────────────────────────────────────────────────────────────────
+      async function connect() {
+        if (hub) {
+          log("Already connected.", "warn");
+          return;
+        }
 
-    <!-- OFFER ACTIONS -->
-    <div class="section">
-      <div class="section-label">Offer Actions (WantedOffer only)</div>
-      <div class="btn-row">
-        <button class="btn btn-ghost" onclick="acceptOffer()" style="color:var(--green);border-color:var(--green);">✓ Accept</button>
-        <button class="btn btn-ghost" onclick="declineOffer()" style="color:var(--red);border-color:var(--red);">✗ Decline</button>
-      </div>
-    </div>
+        const hubUrl = document.getElementById("hubUrl").value;
 
-    <hr/>
+        hub = new signalR.HubConnectionBuilder()
+          .withUrl(hubUrl, { withCredentials: true })
+          .withAutomaticReconnect()
+          .configureLogging(signalR.LogLevel.Warning)
+          .build();
 
-    <!-- TOOLS -->
-    <div class="section">
-      <div class="section-label">Tools</div>
-      <button class="btn btn-ghost btn-full" onclick="loadMessages()">↓ Load Messages</button>
-      <button class="btn btn-ghost btn-full" onclick="markRead()">✓ Mark as Read</button>
-      <button class="btn btn-danger btn-full" onclick="closeConv()">✕ Close Conversation</button>
-    </div>
+        // ── ReceiveMessage — real-time push from server ──────────────────────────
+        hub.on("ReceiveMessage", (msg) => {
+          log(`⚡ ReceiveMessage — ${msg.messageType} from ${msg.senderName}`, "success");
+          renderMsg(msg, false, true); // third param = isRealTime badge
+        });
 
-  </div>
-</div>
+        // ── ReadReceipt ──────────────────────────────────────────────────────────
+        hub.on("ReadReceipt", (receipt) => {
+          log(
+            `✓✓ ReadReceipt — read by ${receipt.readByUserId.slice(0, 8)}... at ${new Date(receipt.readAt).toLocaleTimeString()}`,
+            "success"
+          );
+        });
 
-<!-- ─────────────── MAIN ─────────────────── -->
-<div class="main">
+        // ── ConversationClosed ───────────────────────────────────────────────────
+        hub.on("ConversationClosed", (payload) => {
+          log(`⚠ ConversationClosed — ${payload.reason}`, "warn");
+        });
 
-  <div class="main-header">
-    <h2>Messages</h2>
-    <span id="msg-count" class="badge">0 messages</span>
-  </div>
+        hub.onclose(() => {
+          setStatus("disconnected");
+          log("Connection closed.", "error");
+          hub = null;
+        });
 
-  <div id="messages" class="messages">
-    <div class="empty" id="empty-state">
-      <div class="empty-icon">💬</div>
-      <p>Connect → paste a conversation ID → Join</p>
-    </div>
-  </div>
+        hub.onreconnecting(() => {
+          setStatus("disconnected");
+          log("Reconnecting...", "warn");
+        });
 
-  <div id="console" class="console"></div>
-</div>
+        hub.onreconnected(() => {
+          setStatus("connected");
+          log("Reconnected.", "success");
+        });
 
-<script>
-  // ── State ──────────────────────────────────────────────────────────────────
-  let hub = null;
-  let msgCount = 0;
+        try {
+          await hub.start();
+          setStatus("connected");
+          log("Connected to /hubs/chat", "success");
+        } catch (e) {
+          setStatus("error");
+          log(`Connect failed: ${e.message}`, "error");
+          hub = null;
+        }
+      }
 
-  // ── Logging ────────────────────────────────────────────────────────────────
-  function log(text, type = "info") {
-    const el = document.getElementById("console");
-    const row = document.createElement("div");
-    row.className = `log ${type}`;
-    const ts = new Date().toLocaleTimeString("en-GB", { hour12: false });
-    row.innerHTML = `<span class="ts">${ts}</span><span class="msg-text">${escHtml(text)}</span>`;
-    el.prepend(row);
-  }
+      // ── Disconnect ─────────────────────────────────────────────────────────────
+      async function disconnect() {
+        if (!hub) return;
+        await hub.stop();
+        hub = null;
+        setStatus("disconnected");
+        log("Disconnected.", "info");
+      }
 
-  // ── Connection status ──────────────────────────────────────────────────────
-  function setStatus(state) {
-    const dot   = document.getElementById("dot");
-    const label = document.getElementById("conn-label");
-    dot.className = "dot";
-    if (state === "connected")    { dot.classList.add("live"); label.textContent = "Connected"; }
-    else if (state === "error")   { dot.classList.add("err");  label.textContent = "Error"; }
-    else                          { label.textContent = "Disconnected"; }
-  }
+      // ── Join conversation ──────────────────────────────────────────────────────
+      async function joinConv() {
+        if (!assertHub()) return;
+        const id = document.getElementById("convId").value.trim();
+        if (!id) {
+          log("Paste a conversation ID first.", "warn");
+          return;
+        }
+        try {
+          await hub.invoke("JoinConversation", id);
+          log(`Joined conversation ${id}`, "success");
+          hideEmpty();
+        } catch (e) {
+          log(`JoinConversation failed: ${e.message}`, "error");
+        }
+      }
 
-  // ── Show/hide offer / media fields ────────────────────────────────────────
-  document.getElementById("msgType").addEventListener("change", function() {
-    document.getElementById("priceField").style.display = this.value === "Offer" ? "block" : "none";
-    document.getElementById("mediaField").style.display = this.value === "Media" ? "block" : "none";
-  });
+      // ── Leave conversation ─────────────────────────────────────────────────────
+      async function leaveConv() {
+        if (!assertHub()) return;
+        const id = document.getElementById("convId").value.trim();
+        try {
+          await hub.invoke("LeaveConversation", id);
+          log(`Left conversation ${id}`, "info");
+        } catch (e) {
+          log(`LeaveConversation failed: ${e.message}`, "error");
+        }
+      }
 
-  // ── API helper ─────────────────────────────────────────────────────────────
-  async function api(path, method = "GET", body = null) {
-    const base = document.getElementById("hubUrl").value.replace("/hubs/chat", "");
-    const res = await fetch(`${base}${path}`, {
-      method,
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: body ? JSON.stringify(body) : null
-    });
+      // ── Send message ───────────────────────────────────────────────────────────
+      async function sendMsg() {
+        const id = document.getElementById("convId").value.trim();
+        const type = document.getElementById("msgType").value;
+        const content = document.getElementById("content").value.trim();
+        const price = document.getElementById("offerPrice").value;
+        const media = document.getElementById("mediaUrl").value.trim();
 
-    let data = null;
-    try { data = await res.json(); } catch {}
+        if (!id) {
+          log("No conversation ID.", "warn");
+          return;
+        }
 
-    if (!res.ok) {
-      const msg = data?.message || data?.title || res.statusText || `HTTP ${res.status}`;
-      throw new Error(msg);
-    }
-    return data;
-  }
+        const body = {
+          messageType: type,
+          content: content || null,
+          mediaUrl: media || null,
+          offerPrice: price ? parseFloat(price) : null,
+        };
 
-  // ── Connect ────────────────────────────────────────────────────────────────
-  async function connect() {
-    if (hub) { log("Already connected.", "warn"); return; }
+        try {
+          const result = await api(`/api/conversations/${id}/messages`, "POST", body);
+          renderMsg(result, true, false);
+          log(`Sent ${type} message.`, "success");
+          document.getElementById("content").value = "";
+          hideEmpty();
+        } catch (e) {
+          log(`Send failed: ${e.message}`, "error");
+        }
+      }
 
-    const hubUrl = document.getElementById("hubUrl").value;
+      // ── Accept / Decline offer ─────────────────────────────────────────────────
+      async function acceptOffer() {
+        const id = document.getElementById("convId").value.trim();
+        if (!id) {
+          log("No conversation ID.", "warn");
+          return;
+        }
+        try {
+          const result = await api(`/api/conversations/${id}/offers/accept`, "POST");
+          renderMsg(result, true, false);
+          log("Offer accepted.", "success");
+        } catch (e) {
+          log(`Accept failed: ${e.message}`, "error");
+        }
+      }
 
-    hub = new signalR.HubConnectionBuilder()
-      .withUrl(hubUrl, { withCredentials: true })
-      .withAutomaticReconnect()
-      .configureLogging(signalR.LogLevel.Warning)
-      .build();
+      async function declineOffer() {
+        const id = document.getElementById("convId").value.trim();
+        if (!id) {
+          log("No conversation ID.", "warn");
+          return;
+        }
+        try {
+          const result = await api(`/api/conversations/${id}/offers/decline`, "POST");
+          renderMsg(result, true, false);
+          log("Offer declined.", "success");
+        } catch (e) {
+          log(`Decline failed: ${e.message}`, "error");
+        }
+      }
 
-    // ── ReceiveMessage — real-time push from server ──────────────────────────
-    hub.on("ReceiveMessage", (msg) => {
-      log(`⚡ ReceiveMessage — ${msg.messageType} from ${msg.senderName}`, "success");
-      renderMsg(msg, false, true); // third param = isRealTime badge
-    });
+      // ── Load messages ──────────────────────────────────────────────────────────
+      async function loadMessages() {
+        const id = document.getElementById("convId").value.trim();
+        if (!id) {
+          log("No conversation ID.", "warn");
+          return;
+        }
+        try {
+          const result = await api(`/api/conversations/${id}/messages?pageNumber=1&pageSize=50`);
+          clearMessages();
+          result.data.forEach((m) => renderMsg(m, false, false));
+          log(`Loaded ${result.data.length} messages.`, "success");
+          if (result.data.length > 0) hideEmpty();
+        } catch (e) {
+          log(`Load failed: ${e.message}`, "error");
+        }
+      }
 
-    // ── ReadReceipt ──────────────────────────────────────────────────────────
-    hub.on("ReadReceipt", (receipt) => {
-      log(`✓✓ ReadReceipt — read by ${receipt.readByUserId.slice(0,8)}... at ${new Date(receipt.readAt).toLocaleTimeString()}`, "success");
-    });
+      // ── Mark as read ───────────────────────────────────────────────────────────
+      async function markRead() {
+        const id = document.getElementById("convId").value.trim();
+        if (!id) {
+          log("No conversation ID.", "warn");
+          return;
+        }
+        try {
+          await api(`/api/conversations/${id}/read`, "PATCH");
+          log("Marked as read.", "success");
+        } catch (e) {
+          log(`Mark read failed: ${e.message}`, "error");
+        }
+      }
 
-    // ── ConversationClosed ───────────────────────────────────────────────────
-    hub.on("ConversationClosed", (payload) => {
-      log(`⚠ ConversationClosed — ${payload.reason}`, "warn");
-    });
+      // ── Close conversation ─────────────────────────────────────────────────────
+      async function closeConv() {
+        const id = document.getElementById("convId").value.trim();
+        if (!id) {
+          log("No conversation ID.", "warn");
+          return;
+        }
+        if (!confirm("Close this conversation?")) return;
+        try {
+          await api(`/api/conversations/${id}/close`, "PATCH");
+          log("Conversation closed.", "success");
+        } catch (e) {
+          log(`Close failed: ${e.message}`, "error");
+        }
+      }
 
-    hub.onclose(() => {
-      setStatus("disconnected");
-      log("Connection closed.", "error");
-      hub = null;
-    });
+      // ── Render message ─────────────────────────────────────────────────────────
+      function renderMsg(msg, isSelf, isRealTime) {
+        const container = document.getElementById("messages");
 
-    hub.onreconnecting(() => {
-      setStatus("disconnected");
-      log("Reconnecting...", "warn");
-    });
+        const isSystem = ["SystemEvent", "OfferAccepted", "OfferDeclined"].includes(
+          msg.messageType
+        );
 
-    hub.onreconnected(() => {
-      setStatus("connected");
-      log("Reconnected.", "success");
-    });
+        const div = document.createElement("div");
+        div.className = `msg ${isSystem ? "system" : isSelf ? "self" : "other"}`;
 
-    try {
-      await hub.start();
-      setStatus("connected");
-      log("Connected to /hubs/chat", "success");
-    } catch (e) {
-      setStatus("error");
-      log(`Connect failed: ${e.message}`, "error");
-      hub = null;
-    }
-  }
+        let inner = "";
 
-  // ── Disconnect ─────────────────────────────────────────────────────────────
-  async function disconnect() {
-    if (!hub) return;
-    await hub.stop();
-    hub = null;
-    setStatus("disconnected");
-    log("Disconnected.", "info");
-  }
+        if (!isSystem) {
+          inner += `<div class="msg-sender">${escHtml(msg.senderName || "Unknown")}</div>`;
+        }
 
-  // ── Join conversation ──────────────────────────────────────────────────────
-  async function joinConv() {
-    if (!assertHub()) return;
-    const id = document.getElementById("convId").value.trim();
-    if (!id) { log("Paste a conversation ID first.", "warn"); return; }
-    try {
-      await hub.invoke("JoinConversation", id);
-      log(`Joined conversation ${id}`, "success");
-      hideEmpty();
-    } catch (e) {
-      log(`JoinConversation failed: ${e.message}`, "error");
-    }
-  }
+        inner += `<div class="msg-type type-${msg.messageType}">${msg.messageType}</div>`;
 
-  // ── Leave conversation ─────────────────────────────────────────────────────
-  async function leaveConv() {
-    if (!assertHub()) return;
-    const id = document.getElementById("convId").value.trim();
-    try {
-      await hub.invoke("LeaveConversation", id);
-      log(`Left conversation ${id}`, "info");
-    } catch (e) {
-      log(`LeaveConversation failed: ${e.message}`, "error");
-    }
-  }
+        if (msg.content) {
+          inner += `<div class="msg-content">${escHtml(msg.content)}</div>`;
+        }
 
-  // ── Send message ───────────────────────────────────────────────────────────
-  async function sendMsg() {
-    const id      = document.getElementById("convId").value.trim();
-    const type    = document.getElementById("msgType").value;
-    const content = document.getElementById("content").value.trim();
-    const price   = document.getElementById("offerPrice").value;
-    const media   = document.getElementById("mediaUrl").value.trim();
+        if (msg.offerPrice != null) {
+          inner += `<div class="msg-offer">💰 ${Number(msg.offerPrice).toLocaleString()} EGP</div>`;
+        }
 
-    if (!id) { log("No conversation ID.", "warn"); return; }
+        if (msg.mediaUrl) {
+          inner += `<img src="${escHtml(msg.mediaUrl)}" class="msg-img" onerror="this.style.display='none'"/>`;
+        }
 
-    const body = {
-      messageType: type,
-      content:    content || null,
-      mediaUrl:   media   || null,
-      offerPrice: price   ? parseFloat(price) : null
-    };
+        inner += `<div class="msg-time">${new Date(msg.sentAt).toLocaleString()}</div>`;
 
-    try {
-      const result = await api(`/api/conversations/${id}/messages`, "POST", body);
-      renderMsg(result, true, false);
-      log(`Sent ${type} message.`, "success");
-      document.getElementById("content").value = "";
-      hideEmpty();
-    } catch (e) {
-      log(`Send failed: ${e.message}`, "error");
-    }
-  }
+        if (isRealTime) {
+          inner += `<div class="rt-badge">LIVE</div>`;
+        }
 
-  // ── Accept / Decline offer ─────────────────────────────────────────────────
-  async function acceptOffer() {
-    const id = document.getElementById("convId").value.trim();
-    if (!id) { log("No conversation ID.", "warn"); return; }
-    try {
-      const result = await api(`/api/conversations/${id}/offers/accept`, "POST");
-      renderMsg(result, true, false);
-      log("Offer accepted.", "success");
-    } catch (e) {
-      log(`Accept failed: ${e.message}`, "error");
-    }
-  }
+        div.innerHTML = inner;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
 
-  async function declineOffer() {
-    const id = document.getElementById("convId").value.trim();
-    if (!id) { log("No conversation ID.", "warn"); return; }
-    try {
-      const result = await api(`/api/conversations/${id}/offers/decline`, "POST");
-      renderMsg(result, true, false);
-      log("Offer declined.", "success");
-    } catch (e) {
-      log(`Decline failed: ${e.message}`, "error");
-    }
-  }
+        msgCount++;
+        document.getElementById("msg-count").textContent =
+          `${msgCount} message${msgCount !== 1 ? "s" : ""}`;
+      }
 
-  // ── Load messages ──────────────────────────────────────────────────────────
-  async function loadMessages() {
-    const id = document.getElementById("convId").value.trim();
-    if (!id) { log("No conversation ID.", "warn"); return; }
-    try {
-      const result = await api(`/api/conversations/${id}/messages?pageNumber=1&pageSize=50`);
-      clearMessages();
-      result.data.forEach(m => renderMsg(m, false, false));
-      log(`Loaded ${result.data.length} messages.`, "success");
-      if (result.data.length > 0) hideEmpty();
-    } catch (e) {
-      log(`Load failed: ${e.message}`, "error");
-    }
-  }
+      // ── Helpers ────────────────────────────────────────────────────────────────
+      function assertHub() {
+        if (!hub) {
+          log("Not connected. Click Connect first.", "error");
+          return false;
+        }
+        return true;
+      }
 
-  // ── Mark as read ───────────────────────────────────────────────────────────
-  async function markRead() {
-    const id = document.getElementById("convId").value.trim();
-    if (!id) { log("No conversation ID.", "warn"); return; }
-    try {
-      await api(`/api/conversations/${id}/read`, "PATCH");
-      log("Marked as read.", "success");
-    } catch (e) {
-      log(`Mark read failed: ${e.message}`, "error");
-    }
-  }
+      function hideEmpty() {
+        const el = document.getElementById("empty-state");
+        if (el) el.style.display = "none";
+      }
 
-  // ── Close conversation ─────────────────────────────────────────────────────
-  async function closeConv() {
-    const id = document.getElementById("convId").value.trim();
-    if (!id) { log("No conversation ID.", "warn"); return; }
-    if (!confirm("Close this conversation?")) return;
-    try {
-      await api(`/api/conversations/${id}/close`, "PATCH");
-      log("Conversation closed.", "success");
-    } catch (e) {
-      log(`Close failed: ${e.message}`, "error");
-    }
-  }
+      function clearMessages() {
+        const el = document.getElementById("messages");
+        el.innerHTML = "";
+        msgCount = 0;
+        document.getElementById("msg-count").textContent = "0 messages";
+      }
 
-  // ── Render message ─────────────────────────────────────────────────────────
-  function renderMsg(msg, isSelf, isRealTime) {
-    const container = document.getElementById("messages");
+      function escHtml(str) {
+        return String(str ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
 
-    const isSystem = ["SystemEvent","OfferAccepted","OfferDeclined"].includes(msg.messageType);
-
-    const div = document.createElement("div");
-    div.className = `msg ${isSystem ? "system" : isSelf ? "self" : "other"}`;
-
-    let inner = "";
-
-    if (!isSystem) {
-      inner += `<div class="msg-sender">${escHtml(msg.senderName || "Unknown")}</div>`;
-    }
-
-    inner += `<div class="msg-type type-${msg.messageType}">${msg.messageType}</div>`;
-
-    if (msg.content) {
-      inner += `<div class="msg-content">${escHtml(msg.content)}</div>`;
-    }
-
-    if (msg.offerPrice != null) {
-      inner += `<div class="msg-offer">💰 ${Number(msg.offerPrice).toLocaleString()} EGP</div>`;
-    }
-
-    if (msg.mediaUrl) {
-      inner += `<img src="${escHtml(msg.mediaUrl)}" class="msg-img" onerror="this.style.display='none'"/>`;
-    }
-
-    inner += `<div class="msg-time">${new Date(msg.sentAt).toLocaleString()}</div>`;
-
-    if (isRealTime) {
-      inner += `<div class="rt-badge">LIVE</div>`;
-    }
-
-    div.innerHTML = inner;
-    container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
-
-    msgCount++;
-    document.getElementById("msg-count").textContent = `${msgCount} message${msgCount !== 1 ? "s" : ""}`;
-  }
-
-  // ── Helpers ────────────────────────────────────────────────────────────────
-  function assertHub() {
-    if (!hub) { log("Not connected. Click Connect first.", "error"); return false; }
-    return true;
-  }
-
-  function hideEmpty() {
-    const el = document.getElementById("empty-state");
-    if (el) el.style.display = "none";
-  }
-
-  function clearMessages() {
-    const el = document.getElementById("messages");
-    el.innerHTML = "";
-    msgCount = 0;
-    document.getElementById("msg-count").textContent = "0 messages";
-  }
-
-  function escHtml(str) {
-    return String(str ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
-  window.addEventListener("beforeunload", () => hub?.stop());
-</script>
-</body>
+      window.addEventListener("beforeunload", () => hub?.stop());
+    </script>
+  </body>
 </html>

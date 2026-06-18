@@ -81,7 +81,7 @@ public class ReportService : IReportService
         var saved = await _unitOfWork.Reports.GetByIdWithDetailsAsync(report.Id)
             ?? throw new NotFoundException("Report");
 
-        return _mapper.Map<ReportDetailsResponse>(saved);
+        return await MapReportDetailsAsync(saved);
     }
     #endregion
 
@@ -91,7 +91,7 @@ public class ReportService : IReportService
         var report = await _unitOfWork.Reports.GetByIdWithDetailsAsync(reportId)
             ?? throw new NotFoundException("Report");
 
-        return _mapper.Map<ReportDetailsResponse>(report);
+        return await MapReportDetailsAsync(report);
     }
     #endregion
 
@@ -176,14 +176,28 @@ public class ReportService : IReportService
         var updated = await _unitOfWork.Reports.GetByIdWithDetailsAsync(reportId)
             ?? throw new NotFoundException("Report");
 
-        return _mapper.Map<ReportDetailsResponse>(updated);
+        return await MapReportDetailsAsync(updated);
     }
     #endregion
 
     #region Helpers
-    private async Task ValidateTargetExistsAsync(
-        ReportTargetType targetType,
-        Guid targetId)
+    private async Task<ReportDetailsResponse> MapReportDetailsAsync(Report report)
+    {
+        var response = _mapper.Map<ReportDetailsResponse>(report);
+
+        if (report.TargetType == ReportTargetType.Comment)
+        {
+            var comment = await _unitOfWork.Comments.GetCommentWithAuthorAsync(report.TargetId);
+            if (comment is not null)
+            {
+                response = response with { TargetCommentBody = comment.Body };
+            }
+        }
+
+        return response;
+    }
+
+    private async Task ValidateTargetExistsAsync(ReportTargetType targetType, Guid targetId)
     {
         switch (targetType)
         {

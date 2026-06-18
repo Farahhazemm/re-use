@@ -49,9 +49,20 @@ public class NotificationPublisher : INotificationPublisher
         string body,
         T data) where T : INotificationData
     {
-        await Task.WhenAll(
-            userIds.Select(id =>
-                PublishAsync(id, type, title, body, data)
-            ));
+        var failures = new List<Exception>();
+        foreach (var id in userIds)
+        {
+            try
+            {
+                await PublishAsync(id, type, title, body, data);
+            }
+            catch (Exception ex)
+            {
+                failures.Add(ex);
+            }
+        }
+
+        if (failures.Count > 0)
+            throw new AggregateException(failures);
     }
 }

@@ -9,7 +9,7 @@ public class ActivityEventDto
     public Guid? ProductId { get; set; }
     public string Type { get; set; } = string.Empty;
     public string? Description { get; set; }
-    // public string? Metadata { get; set; }
     public DateTime Timestamp { get; set; }
     public DateTime CreatedAt { get; set; }
+    public ProductBriefDto? Product { get; set; }
 }

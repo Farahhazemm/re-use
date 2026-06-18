@@ -18,6 +18,8 @@ public interface IUnitOfWork : IDisposable
     IFavoriteRepository Favorites { get; }
 
     INotificationRepository Notifications { get; }
+    IBroadcastRepository Broadcasts { get; }
+
     IPaymentRepository Payments { get; }
 
     IRecommendationRepository Recommendations { get; }
@@ -31,6 +33,8 @@ public interface IUnitOfWork : IDisposable
     IFeedbackRepository Feedback { get; }
     ISystemActivityLogRepository SystemActivityLogs { get; }
     IReportRepository Reports { get; }
+    IProductDealRepository ProductDeal { get; }
+
     Task<int> SaveChangesAsync();
     void Dispose();
 }

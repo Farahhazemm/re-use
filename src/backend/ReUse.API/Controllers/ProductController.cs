@@ -87,6 +87,18 @@ public class ProductController : ControllerBase
             await svc.TrackViewAsync(productId, userId, ip, ua);
         });
 
+        if (userId.HasValue)
+        {
+            _ = Task.Run(async () =>
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var activityService = scope.ServiceProvider.GetRequiredService<IActivityService>();
+                await activityService.CreateActivityAsync(
+                    userId.Value, productId, "product.viewed",
+                    $"Viewed product: {result.Title}");
+            });
+        }
+
         return Ok(result);
     }
 
@@ -229,5 +241,54 @@ public class ProductController : ControllerBase
 
         await _promotionService.PayCallback(receivedHmac, payload);
         return Ok();
+    }
+
+    [HttpPost("/api/me/deals")]
+    [Authorize]
+    public async Task<IActionResult> GetMyDeals()
+    {
+        var userId = User.GetBusinessId();
+
+        var deals = await _productService.GetMyDealsAsync(userId);
+
+        return Ok(deals);
+    }
+
+    [HttpPost("{productId:guid}/close")]
+    [Authorize]
+    public async Task<IActionResult> Close(
+        Guid productId,
+        [FromBody] CloseProductRequest request)
+    {
+        var userId = User.GetBusinessId();
+
+        await _productService.CloseProductAsync(
+            productId,
+            userId,
+            request);
+
+        return NoContent();
+    }
+
+    [HttpPost("/api/deals/{dealId:guid}/confirm")]
+    [Authorize]
+    public async Task<IActionResult> ConfirmDeal(Guid dealId)
+    {
+        var userId = User.GetBusinessId();
+
+        await _productService.ConfirmDealAsync(dealId, userId);
+
+        return NoContent();
+    }
+
+    [HttpPost("/api/deals/{dealId:guid}/reject")]
+    [Authorize]
+    public async Task<IActionResult> RejectDeal(Guid dealId)
+    {
+        var userId = User.GetBusinessId();
+
+        await _productService.RejectDealAsync(dealId, userId);
+
+        return NoContent();
     }
 }
