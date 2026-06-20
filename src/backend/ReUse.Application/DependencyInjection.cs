@@ -29,6 +29,8 @@ public static class DependencyInjection
         services.AddScoped<IConversationService, ConversationService>();
         services.AddScoped<ISystemActivityLogService, SystemActivityLogService>();
         services.AddScoped<IReportService, ReportService>();
+        services.AddScoped<IDashboardService, DashboardService>();
+
         #endregion
 
         // Recommendation weights 

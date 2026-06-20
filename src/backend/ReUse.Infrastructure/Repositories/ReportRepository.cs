@@ -131,4 +131,26 @@ public class ReportRepository : BaseRepository<Report>, IReportRepository
                           && r.TargetId == targetId
                           && r.Status == ReportStatus.Pending);
     }
+
+    public async Task<int> CountByStatusAsync(ReportStatus status, DateTime? from, DateTime? to)
+    {
+        var query = _context.Reports
+            .AsNoTracking()
+            .Where(r => r.Status == status);
+
+        if (from.HasValue)
+            query = query.Where(r => r.CreatedAt >= from.Value);
+
+        if (to.HasValue)
+            query = query.Where(r => r.CreatedAt <= to.Value);
+
+        return await query.CountAsync();
+    }
+
+    public async Task<int> CountCurrentlyByStatusAsync(ReportStatus status)
+    {
+        return await _context.Reports
+            .AsNoTracking()
+            .CountAsync(r => r.Status == status);
+    }
 }

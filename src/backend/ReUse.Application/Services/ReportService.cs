@@ -180,6 +180,18 @@ public class ReportService : IReportService
     }
     #endregion
 
+    #region COUNT
+    public async Task<int> CountByStatusAsync(ReportStatus status, DateTime? from, DateTime? to)
+    {
+        return await _unitOfWork.Reports.CountByStatusAsync(status, from, to);
+    }
+
+    public async Task<int> CountCurrentlyByStatusAsync(ReportStatus status)
+    {
+        return await _unitOfWork.Reports.CountCurrentlyByStatusAsync(status);
+    }
+    #endregion
+
     #region Helpers
     private async Task<ReportDetailsResponse> MapReportDetailsAsync(Report report)
     {

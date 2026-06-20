@@ -1,6 +1,7 @@
 ﻿using ReUse.Application.DTOs;
 using ReUse.Application.DTOs.Reports;
 using ReUse.Application.Enums;
+using ReUse.Domain.Enums;
 
 namespace ReUse.Application.Interfaces.Services;
 
@@ -15,4 +16,7 @@ public interface IReportService
     Task<PagedResult<ReportResponse>> GetByReporterAsync(Guid reporterUserId, PaginationParams pagination, SortDirection sortDirection = SortDirection.Desc);
 
     Task<ReportDetailsResponse> ReviewAsync(Guid reportId, Guid reviewerUserId, ReviewReportRequest request);
+    Task<int> CountByStatusAsync(ReportStatus status, DateTime? from, DateTime? to);
+    Task<int> CountCurrentlyByStatusAsync(ReportStatus status);
+
 }

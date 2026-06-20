@@ -12,4 +12,6 @@ public interface IUserRepository : IBaseRepository<User>
     Task<PagedResult<User>> GetPagedAdminAsync(AdminUserFilterParams filterParams, HashSet<string>? allowedIdentityIds, Guid? excludeUserId = null);
     Task<List<Guid>> GetIdsByIdentityIdsAsync(IEnumerable<string> identityIds);
     Task<List<Guid>> GetAllActiveUserIdsAsync();
+    Task<int> CountAsync(DateTime? from, DateTime? to);
+
 }

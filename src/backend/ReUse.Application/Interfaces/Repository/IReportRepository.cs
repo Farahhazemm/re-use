@@ -18,4 +18,10 @@ public interface IReportRepository : IBaseRepository<Report>
     Task<PagedResult<Report>> GetByReporterAsync(Guid reporterUserId, PaginationParams pagination, SortDirection sortDirection = SortDirection.Desc);
 
     Task<int> CountPendingByTargetAsync(ReportTargetType targetType, Guid targetId);
+
+    Task<int> CountByStatusAsync(ReportStatus status, DateTime? from, DateTime? to);
+
+    Task<int> CountCurrentlyByStatusAsync(ReportStatus status);
+
+
 }

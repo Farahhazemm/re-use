@@ -101,4 +101,9 @@ public class UserService : IUserService
         await _unitOfWork.SaveChangesAsync();
         await _cloudinaryService.DeleteAsync(publicId);
     }
+
+    public async Task<int> CountAsync(DateTime? from, DateTime? to)
+    {
+        return await _unitOfWork.User.CountAsync(from, to);
+    }
 }

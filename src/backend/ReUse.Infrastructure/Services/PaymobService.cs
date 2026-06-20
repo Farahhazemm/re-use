@@ -8,7 +8,6 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
 
 using ReUse.Application.DTOs.Payment;
-using ReUse.Application.DTOs.Products.Responses;
 using ReUse.Application.Exceptions;
 using ReUse.Application.Interfaces;
 using ReUse.Application.Interfaces.Services;
@@ -16,7 +15,6 @@ using ReUse.Application.Interfaces.Services.External;
 using ReUse.Domain.Entities;
 using ReUse.Domain.Enums;
 using ReUse.Infrastructure.Models.Paymob;
-
 namespace ReUse.Infrastructure.Services;
 
 public class PaymobService : IPaymentService
@@ -221,5 +219,10 @@ public class PaymobService : IPaymentService
         return JsonSerializer.Deserialize<PaymentIntentionResponse>(body,
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower })
             ?? throw new Exception("Failed to deserialize Paymob response");
+    }
+
+    public async Task<decimal> SumSuccessfulAsync(DateTime? from, DateTime? to)
+    {
+        return await _uow.Payments.SumByStatusAsync(PaymentStatus.Success, from, to);
     }
 }

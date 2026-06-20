@@ -85,4 +85,14 @@ public class UserRepository : BaseRepository<User>, IUserRepository
             .Select(u => u.Id)
             .ToListAsync();
     }
+
+    public async Task<int> CountAsync(DateTime? from, DateTime? to)
+    {
+        var query = _context.Set<User>()
+            .AsNoTracking()
+            .AsQueryable()
+            .FilterByCreatedDate(from, to);
+
+        return await query.CountAsync();
+    }
 }

@@ -9,4 +9,7 @@ public interface IPaymentService
 {
     Task<string> Pay(List<ItemDto> items, BillingDataDto billingData, Guid userId, object? extras = null);
     Task<PaymentCallbackDto> HandleCallback(string receivedHmac, object rowPayload);
+
+    Task<decimal> SumSuccessfulAsync(DateTime? from, DateTime? to);
+
 }

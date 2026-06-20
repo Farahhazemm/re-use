@@ -12,4 +12,6 @@ public interface IUserService
     public Task UpdateUserProfileAsync(Guid userId, UpdateUserProfileRequest request);
     public Task UpdateImageProfileAsync(Guid userId, UpdateImageRequest request, ProfileImageOptions imageType);
     public Task DeleteProfileImageAsync(Guid userId, ProfileImageOptions imageType);
+    Task<int> CountAsync(DateTime? from, DateTime? to);
+
 }
