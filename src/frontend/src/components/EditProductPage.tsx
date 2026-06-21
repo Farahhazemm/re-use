@@ -1,10 +1,21 @@
 import { useState, useEffect, useRef } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Plus, X, Trash2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./ui/alert-dialog";
 import { useNavigate, useParams } from "react-router-dom";
 import { getCategoryTree, type CategoryResponse } from "../services/categoryService";
 import {
@@ -12,8 +23,14 @@ import {
   updateRegularProduct,
   updateWantedProduct,
   updateSwapProduct,
+  deleteProduct,
+  uploadOfferImages,
+  uploadWantedImages,
+  deleteProductImage,
+  reorderProductImages,
   type ProductCondition,
   type ProductType,
+  type ProductImageItem,
 } from "../services/productService";
 import { EGYPT_CITIES, EGYPT_COUNTRY } from "./data/locations";
 
@@ -24,7 +41,244 @@ const CONDITIONS: { label: string; value: ProductCondition }[] = [
   { label: "Broken", value: "Broken" },
 ];
 
+const MAX_IMAGES = 10;
+
 const RequiredMark = () => <span className="text-red-500">*</span>;
+
+/**
+ * Manages one group of product images (Offer or Wanted) against the live API:
+ * uploads new files immediately, deletes immediately, and persists drag-reorder.
+ */
+function ImageManager({
+  title,
+  required,
+  helperText,
+  images,
+  onUpload,
+  onDelete,
+  onReorder,
+}: {
+  title: string;
+  required?: boolean;
+  helperText?: string;
+  images: ProductImageItem[];
+  onUpload: (files: File[]) => Promise<void>;
+  onDelete: (imageId: string) => Promise<void>;
+  onReorder: (orderedIds: string[]) => Promise<void>;
+}) {
+  const [isUploading, setIsUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const dragIndexRef = useRef<number | null>(null);
+  const hasDraggedRef = useRef(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Snapshot into a real array BEFORE resetting the input — e.target.files
+    // is a live FileList tied to the DOM node, so clearing e.target.value
+    // also empties this reference if read afterwards.
+    const allFiles = Array.from(files);
+    e.target.value = "";
+
+    const remaining = MAX_IMAGES - images.length;
+    if (remaining <= 0) return;
+
+    const toUpload = allFiles.slice(0, remaining);
+    setError("");
+    setIsUploading(true);
+    try {
+      await onUpload(toUpload);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to upload image(s)");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemove = async (imageId: string) => {
+    setError("");
+    setDeletingId(imageId);
+    try {
+      await onDelete(imageId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete image");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleDrop = async (from: number, to: number) => {
+    if (from === to) return;
+    const reordered = [...images];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moved);
+    setError("");
+    try {
+      await onReorder(reordered.map((img) => img.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reorder images");
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl p-8 border border-gray-200 mb-6">
+      <h3 className="text-[20px] font-semibold text-gray-900 mb-2">
+        {title} {required && <RequiredMark />}
+      </h3>
+      {helperText && <p className="text-gray-600 text-[14px] mb-6">{helperText}</p>}
+
+      <label
+        className={`block border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${
+          images.length >= MAX_IMAGES || isUploading
+            ? "border-gray-200 cursor-not-allowed opacity-50"
+            : "border-gray-300 cursor-pointer hover:border-[#4B0082] hover:bg-gray-50"
+        }`}
+      >
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleFileChange}
+          className="hidden"
+          disabled={images.length >= MAX_IMAGES || isUploading}
+        />
+        <Plus className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+        <p className="text-gray-700 font-medium mb-1">
+          {isUploading ? "Uploading..." : "Click to add photos"}
+        </p>
+        <p className="text-sm text-gray-500">
+          PNG, JPG up to 5 MB each ({images.length}/{MAX_IMAGES})
+        </p>
+      </label>
+
+      {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
+
+      {images.length > 0 && (
+        <>
+          <p className="text-xs text-gray-400 mt-4 mb-2">
+            Drag to reorder · First image is the cover
+          </p>
+          <div className="grid grid-cols-5 gap-4">
+            {images.map((img, i) => (
+              <div
+                key={img.id}
+                draggable
+                onDragStart={() => {
+                  hasDraggedRef.current = false;
+                  dragIndexRef.current = i;
+                  setDraggingIndex(i);
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (dragOverIndex !== i) setDragOverIndex(i);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragIndexRef.current !== null && dragIndexRef.current !== i)
+                    handleDrop(dragIndexRef.current, i);
+                  dragIndexRef.current = null;
+                  setDraggingIndex(null);
+                  setDragOverIndex(null);
+                }}
+                onDragEnd={() => {
+                  hasDraggedRef.current = true;
+                  dragIndexRef.current = null;
+                  setDraggingIndex(null);
+                  setDragOverIndex(null);
+                }}
+                onClick={() => {
+                  if (!hasDraggedRef.current) setLightboxIndex(i);
+                  hasDraggedRef.current = false;
+                }}
+                className={`relative group cursor-grab active:cursor-grabbing transition-all duration-150 ${
+                  draggingIndex === i ? "opacity-40 scale-95" : ""
+                } ${
+                  dragOverIndex === i && draggingIndex !== i
+                    ? "ring-2 ring-[#4B0082] rounded-lg scale-105"
+                    : ""
+                } ${deletingId === img.id ? "opacity-40" : ""}`}
+              >
+                {i === 0 && (
+                  <div className="absolute -top-2 -left-2 bg-[#4B0082] text-white text-xs font-bold px-2 py-1 rounded-md z-10">
+                    Cover
+                  </div>
+                )}
+                <img
+                  src={img.url}
+                  alt={`Upload ${i + 1}`}
+                  draggable={false}
+                  className="w-full aspect-square object-cover rounded-lg pointer-events-none select-none"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemove(img.id);
+                  }}
+                  disabled={deletingId === img.id || images.length <= 1}
+                  title={images.length <= 1 ? "Product must have at least one image" : "Remove"}
+                  className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 disabled:opacity-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {lightboxIndex !== null && lightboxIndex < images.length && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-8"
+          onClick={() => setLightboxIndex(null)}
+        >
+          {lightboxIndex > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex(lightboxIndex - 1);
+              }}
+              className="absolute left-4 text-white text-3xl px-3 py-1 hover:bg-white/10 rounded-full"
+            >
+              ‹
+            </button>
+          )}
+          <img
+            src={images[lightboxIndex].url}
+            alt={`Preview ${lightboxIndex + 1}`}
+            className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          {lightboxIndex < images.length - 1 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex(lightboxIndex + 1);
+              }}
+              className="absolute right-4 text-white text-3xl px-3 py-1 hover:bg-white/10 rounded-full"
+            >
+              ›
+            </button>
+          )}
+          <div className="absolute bottom-4 text-white text-sm">
+            {lightboxIndex + 1} / {images.length}
+          </div>
+          <button
+            onClick={() => setLightboxIndex(null)}
+            className="absolute top-4 right-4 text-white text-2xl px-3 py-1 hover:bg-white/10 rounded-full"
+          >
+            ×
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function EditProductPage() {
   const navigate = useNavigate();
@@ -43,6 +297,10 @@ export function EditProductPage() {
   const [citySearch, setCitySearch] = useState("");
   const categoryRef = useRef<HTMLDivElement>(null);
   const cityRef = useRef<HTMLDivElement>(null);
+
+  // Offer images (cover/primary photos) and Wanted images (Swap only)
+  const [offerImages, setOfferImages] = useState<ProductImageItem[]>([]);
+  const [wantedImages, setWantedImages] = useState<ProductImageItem[]>([]);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -96,6 +354,17 @@ export function EditProductPage() {
           wantedItemTitle: p.wantedItemTitle ?? "",
           wantedItemDescription: p.wantedItemDescription ?? "",
         });
+        const items = p.imageItems ?? [];
+        setOfferImages(
+          items
+            .filter((img) => img.type === "Offer")
+            .sort((a, b) => a.displayOrder - b.displayOrder)
+        );
+        setWantedImages(
+          items
+            .filter((img) => img.type === "Wanted")
+            .sort((a, b) => a.displayOrder - b.displayOrder)
+        );
       })
       .catch((err) => setLoadError(err instanceof Error ? err.message : "Failed to load product"))
       .finally(() => setIsLoading(false));
@@ -103,6 +372,78 @@ export function EditProductPage() {
 
   const set = (field: string, value: string | boolean) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
+
+  // ─── Image handlers (Offer images) ──────────────────────────────────────
+  const handleUploadOfferImages = async (files: File[]) => {
+    if (!productId) return;
+    const uploaded = await uploadOfferImages(productId, files);
+    setOfferImages((prev) => [
+      ...prev,
+      ...uploaded.map((img, idx) => ({
+        id: img.id,
+        url: img.url,
+        type: "Offer" as const,
+        displayOrder: prev.length + idx,
+      })),
+    ]);
+  };
+
+  const handleDeleteOfferImage = async (imageId: string) => {
+    await deleteProductImage(imageId);
+    setOfferImages((prev) => prev.filter((img) => img.id !== imageId));
+  };
+
+  const handleReorderOfferImages = async (orderedIds: string[]) => {
+    const reordered = orderedIds.map((id, idx) => {
+      const img = offerImages.find((i) => i.id === id)!;
+      return { ...img, displayOrder: idx };
+    });
+    setOfferImages(reordered);
+    await reorderProductImages(
+      reordered.map((img) => ({ imageId: img.id, displayOrder: img.displayOrder }))
+    );
+  };
+
+  // ─── Image handlers (Wanted images — Swap only) ─────────────────────────
+  const handleUploadWantedImages = async (files: File[]) => {
+    if (!productId) return;
+    const uploaded = await uploadWantedImages(productId, files);
+    setWantedImages((prev) => [
+      ...prev,
+      ...uploaded.map((img, idx) => ({
+        id: img.id,
+        url: img.url,
+        type: "Wanted" as const,
+        displayOrder: prev.length + idx,
+      })),
+    ]);
+  };
+
+  const handleDeleteWantedImage = async (imageId: string) => {
+    await deleteProductImage(imageId);
+    setWantedImages((prev) => prev.filter((img) => img.id !== imageId));
+  };
+
+  const handleReorderWantedImages = async (orderedIds: string[]) => {
+    const reordered = orderedIds.map((id, idx) => {
+      const img = wantedImages.find((i) => i.id === id)!;
+      return { ...img, displayOrder: idx };
+    });
+    setWantedImages(reordered);
+    await reorderProductImages(
+      reordered.map((img) => ({ imageId: img.id, displayOrder: img.displayOrder }))
+    );
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!productId) return;
+    try {
+      await deleteProduct(productId);
+      navigate("/my-products");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete product");
+    }
+  };
 
   const validate = (): string => {
     if (!formData.title.trim()) return "Please enter a title";
@@ -211,11 +552,45 @@ export function EditProductPage() {
           >
             ← Back
           </button>
-          <h1 className="text-[36px] font-bold text-gray-900 mb-2">Edit Your Item</h1>
-          <p className="text-gray-600 text-[16px]">Update the details of your listing</p>
-          <p className="text-gray-500 text-[14px] mt-2">
-            All fields marked with <RequiredMark /> are required.
-          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-[36px] font-bold text-gray-900 mb-2">Edit Your Item</h1>
+              <p className="text-gray-600 text-[16px]">Update the details of your listing</p>
+              <p className="text-gray-500 text-[14px] mt-2">
+                All fields marked with <RequiredMark /> are required.
+              </p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="lg"
+                  className="flex items-center gap-2 shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete Product
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete your product listing
+                    and remove all associated data.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDeleteProduct}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
 
         {/* Product Type (read-only) */}
@@ -554,6 +929,29 @@ export function EditProductPage() {
             </div>
           )}
         </div>
+
+        {/* Photos */}
+        <ImageManager
+          title={productType === "Swap" ? "Photos of Your Item" : "Photos"}
+          required
+          helperText="Add at least 1 photo. Max 10 images, up to 5 MB each. Drag to reorder, click to preview."
+          images={offerImages}
+          onUpload={handleUploadOfferImages}
+          onDelete={handleDeleteOfferImage}
+          onReorder={handleReorderOfferImages}
+        />
+
+        {/* Wanted Images (Swap only) */}
+        {productType === "Swap" && (
+          <ImageManager
+            title="Photos of What You Want"
+            helperText="Optional. Add reference photos of the item you want in return. Max 10 images, up to 5 MB each."
+            images={wantedImages}
+            onUpload={handleUploadWantedImages}
+            onDelete={handleDeleteWantedImage}
+            onReorder={handleReorderWantedImages}
+          />
+        )}
 
         {/* Error */}
         {error && (

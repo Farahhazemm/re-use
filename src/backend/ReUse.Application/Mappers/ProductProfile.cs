@@ -118,6 +118,12 @@ public class ProductProfile : Profile
                      .OrderBy(i => i.DisplayOrder)
                      .Select(i => i.Url)
                      .ToList()))
+          .ForMember(dest => dest.ImageItems,
+              opt => opt.MapFrom(src =>
+                  src.ProductImages
+                     .OrderBy(i => i.DisplayOrder)
+                     .Select(i => new ImageItemResponse(i.Id, i.Url, i.Type, i.DisplayOrder))
+                     .ToList()))
           .ForMember(dest => dest.OwnerUserName,
               opt => opt.MapFrom(src => src.Owner.FullName))
           .ForMember(dest => dest.OwnerProfileImageUrl,

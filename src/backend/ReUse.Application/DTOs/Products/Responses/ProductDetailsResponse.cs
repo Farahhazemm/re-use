@@ -26,6 +26,7 @@ public record ProductDetailsResponse
     public decimal? DesiredPriceMax { get; init; }
 
     public List<string> Images { get; init; } = [];
+    public List<ImageItemResponse> ImageItems { get; init; } = [];
     public DateTime CreatedAt { get; init; }
     public Guid CategoryId { get; init; }
     public string CategoryName { get; init; } = string.Empty;

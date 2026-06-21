@@ -12,6 +12,13 @@ export interface ProductImage {
   type: string;
 }
 
+export interface ProductImageItem {
+  id: string;
+  url: string;
+  type: "Offer" | "Wanted";
+  displayOrder: number;
+}
+
 export interface ProductResponse {
   id: string;
   type: ProductType;
@@ -57,6 +64,7 @@ export interface ProductDetailsResponse {
   desiredPriceMin: number | null;
   desiredPriceMax: number | null;
   images: string[];
+  imageItems: ProductImageItem[];
   createdAt: string;
   categoryId: string;
   categoryName: string;
@@ -397,6 +405,68 @@ export async function updateSwapProduct(id: string, req: UpdateSwapProductReques
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(req),
+  });
+  await handleEmptyResponse(res);
+}
+
+// ─── Image management endpoints ───────────────────────────────────────────
+
+export interface UploadedImageResponse {
+  id: string;
+  url: string;
+  publicId: string;
+}
+
+/** POST /api/Product/{productId}/images/offer — upload more "offer" images (Regular/Wanted/Swap-offer). */
+export async function uploadOfferImages(
+  productId: string,
+  images: File[]
+): Promise<UploadedImageResponse[]> {
+  const form = new FormData();
+  images.forEach((f) => form.append("Images", f));
+
+  const res = await fetch(`${BASE_URL}/Product/${productId}/images/offer`, {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  return handleResponse<UploadedImageResponse[]>(res);
+}
+
+/** POST /api/Product/{productId}/images/wanted — upload more "wanted" images (Swap only). */
+export async function uploadWantedImages(
+  productId: string,
+  images: File[]
+): Promise<UploadedImageResponse[]> {
+  const form = new FormData();
+  images.forEach((f) => form.append("Images", f));
+
+  const res = await fetch(`${BASE_URL}/Product/${productId}/images/wanted`, {
+    method: "POST",
+    credentials: "include",
+    body: form,
+  });
+  return handleResponse<UploadedImageResponse[]>(res);
+}
+
+/** DELETE /api/Product/images/{imageId} — delete a single product image. */
+export async function deleteProductImage(imageId: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/Product/images/${imageId}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  await handleEmptyResponse(res);
+}
+
+/** PUT /api/Product/images/reorder — persist new display order (first item = cover). */
+export async function reorderProductImages(
+  items: { imageId: string; displayOrder: number }[]
+): Promise<void> {
+  const res = await fetch(`${BASE_URL}/Product/images/reorder`, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ items }),
   });
   await handleEmptyResponse(res);
 }
